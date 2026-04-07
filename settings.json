@@ -1,0 +1,8 @@
+{
+    "workbench.editor.autoLockGroups": {
+        "imagePreview.previewEditor": true,
+        "vscode.videoPreview": true
+    },
+    "geminicodeassist.project": "big-mender-424319-s0",
+    "python.analysis.typeCheckingMode": "basic"
+}

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:graph.facebook.com)",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Skill(schedule)",
+      "Skill(schedule:*)",
+      "mcp__claude_ai_Notion__notion-update-page",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Google_Calendar__gcal_create_event",
+      "WebSearch",
+      "WebFetch(domain:www.instagram.com)",
+      "mcp__claude_ai_Canva__list-brand-kits",
+      "mcp__claude_ai_Canva__generate-design",
+      "mcp__claude_ai_Canva__create-design-from-candidate",
+      "Bash(start https://www.canva.com/d/DvMwzw0cbwfXB6l)",
+      "Bash(start https://www.canva.com/d/AXkiCtN9tNoyx_7)",
+      "Bash(start https://www.canva.com/d/mKSQnOIOYsNL0R1)",
+      "Bash(start \"https://www.canva.com/d/-Trf7OzcXYp3GpP\")",
+      "Bash(start https://www.canva.com/d/jbknzS51nrb4MI0)",
+      "Bash(start https://www.canva.com/projects)",
+      "mcp__claude_ai_Notion__notion-get-teams",
+      "WebFetch(domain:brandsdecoded.com.br)",
+      "WebFetch(domain:hotmart.com)",
+      "Bash(start https://www.notion.so/336cd9bc1c65810c9a6df70dbfb1bed6)",
+      "mcp__claude_ai_Notion__notion-move-pages"
+    ]
+  }
+}

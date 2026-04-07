@@ -1,0 +1,29 @@
+name = "dashboard-agencia-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dashboard_clientes_db"
+database_id = "45883827-7e19-4b50-a7e0-99cd67e6a21a"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "b8fec27bd57b436ea838141929060a0a"
+
+# R2 — descomente após habilitar R2 no Cloudflare Dashboard (gratuito, requer cartão)
+# [[r2_buckets]]
+# binding = "LOGOS"
+# bucket_name = "dashboard-logos"
+
+[triggers]
+crons = ["0 12 * * 1"]   # Segunda-feira 12h UTC = 9h BRT
+
+[vars]
+ENVIRONMENT = "production"
+FRONTEND_URL = "https://dashboard-agencia-9zn.pages.dev"
+
+# Secrets (configurar via: wrangler secret put JWT_SECRET)
+# JWT_SECRET = segredo de 256 bits para assinar tokens JWT
+# ZAPI_TOKEN = token Z-API para notificações WhatsApp automáticas (opcional)
