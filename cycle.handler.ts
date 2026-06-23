@@ -1,7 +1,7 @@
 import { Context } from 'hono'
-import { ok, created, err, notFound } from '../utils/response'
-import { generateId } from '../utils/id'
-import { Env } from '../middleware/auth.middleware'
+import { ok, created, err, notFound } from './response'
+import { generateId } from './id'
+import { Env } from './auth.middleware'
 
 export async function listCycles(c: Context<{ Bindings: Env }>) {
   const { clientId } = c.req.param()
@@ -18,7 +18,6 @@ export async function getCycle(c: Context<{ Bindings: Env }>) {
   let query = 'SELECT * FROM cycles WHERE id = ?'
   const binds: unknown[] = [cycleId]
 
-  // Clientes só veem os próprios ciclos
   if (user.role === 'client') {
     query += ' AND client_id = ?'
     binds.push(user.clientId)
