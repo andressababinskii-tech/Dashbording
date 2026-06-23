@@ -1,9 +1,8 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk } from '../utils/response'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk } from './response'
+import { newId } from './id'
 
-// GET /api/admin/trends
 export async function getTrends(c: Context<{ Bindings: Env }>) {
   const category = c.req.query('category') ?? null
 
@@ -15,7 +14,6 @@ export async function getTrends(c: Context<{ Bindings: Env }>) {
     ? await c.env.DB.prepare(query).bind(category).all()
     : await c.env.DB.prepare(query).all()
 
-  // Agrupar por categoria
   const grouped: Record<string, { top: string[]; rising: string[]; topics: string[]; musics: string[] }> = {}
   for (const row of results as { category: string; type: string; content: string }[]) {
     if (!grouped[row.category]) {
@@ -27,7 +25,6 @@ export async function getTrends(c: Context<{ Bindings: Env }>) {
     if (row.type === 'music')  grouped[row.category].musics.push(row.content)
   }
 
-  // Data da última atualização
   const lastRow = await c.env.DB.prepare(
     `SELECT updated_at FROM trends ORDER BY updated_at DESC LIMIT 1`
   ).first<{ updated_at: string }>()
@@ -35,7 +32,6 @@ export async function getTrends(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { grouped, last_updated: lastRow?.updated_at ?? null })
 }
 
-// POST /api/admin/trends/sync-now — re-run cron (fetch from Notion + Google Trends)
 export async function syncTrendsNow(c: Context<{ Bindings: Env }>) {
   const { updateTrends } = await import('./cron.handler')
   try {
@@ -46,7 +42,6 @@ export async function syncTrendsNow(c: Context<{ Bindings: Env }>) {
   }
 }
 
-// POST /api/admin/trends/search — busca por # ou @ no conteúdo
 export async function searchTrends(c: Context<{ Bindings: Env }>) {
   const body = await c.req.json<{ q: string }>()
   const q = body.q?.trim().replace(/^[@#]/, '').toLowerCase()
@@ -59,14 +54,12 @@ export async function searchTrends(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, rows.results)
 }
 
-// POST /api/admin/trends/sync  — recebe batch do Python
 export async function syncTrends(c: Context<{ Bindings: Env }>) {
   const body = await c.req.json<{
     category: string
     items: { type: 'top' | 'rising' | 'topic' | 'music'; content: string }[]
   }>()
 
-  // Limpar categoria antes de inserir
   await c.env.DB.prepare(`DELETE FROM trends WHERE category = ?`).bind(body.category).run()
 
   const stmts = body.items.map(item =>
