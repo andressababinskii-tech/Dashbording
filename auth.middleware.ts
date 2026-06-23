@@ -1,6 +1,6 @@
 import { Context, Next } from 'hono'
-import { verifyToken, JwtPayload } from '../utils/jwt'
-import { unauthorized } from '../utils/response'
+import { verifyToken, JwtPayload } from './jwt'
+import { unauthorized } from './response'
 
 export type Env = {
   DB: D1Database
