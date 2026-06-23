@@ -1,11 +1,10 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { generateId as nanoid } from '../utils/id'
-import { jsonOk } from '../utils/response'
+import { Env } from './auth.middleware'
+import { generateId as nanoid } from './id'
+import { jsonOk } from './response'
 
 type C = Context<{ Bindings: Env }>
 
-// ── GET /api/admin/tasks?status=&due_date=YYYY-MM ─────────────────────────
 export async function listTasks(c: C) {
   const status   = c.req.query('status')
   const month    = c.req.query('month')
@@ -26,7 +25,6 @@ export async function listTasks(c: C) {
   return jsonOk(c, rows.results)
 }
 
-// ── POST /api/admin/tasks ──────────────────────────────────────────────────
 export async function createTask(c: C) {
   const body = await c.req.json<{
     title: string; description?: string; priority?: string
@@ -48,7 +46,6 @@ export async function createTask(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── PATCH /api/admin/tasks/:id ────────────────────────────────────────────
 export async function updateTask(c: C) {
   const id   = c.req.param('id')
   const body = await c.req.json<{
@@ -73,7 +70,6 @@ export async function updateTask(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── DELETE /api/admin/tasks/:id ───────────────────────────────────────────
 export async function deleteTask(c: C) {
   await c.env.DB.prepare(`DELETE FROM tasks WHERE id=?`).bind(c.req.param('id')).run()
   return jsonOk(c, { deleted: true })

@@ -1,18 +1,9 @@
-/**
- * Cron handler — executa todo dia às 9h BRT (12h UTC)
- * 1. Gera e envia relatório diário de todas as contas Instagram
- * 2. Toda segunda-feira também:
- *    a. Atualiza métricas de todas as contas Instagram via Graph API
- *    b. Atualiza trending topics Brasil via Google Trends RSS
- */
-
-import { Env } from '../middleware/auth.middleware'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { newId } from './id'
 import { generateDailyReport } from './daily-report.handler'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
-// ── Graph API helpers ────────────────────────────────────────────────────────
 async function graphGet(path: string, token: string, params: Record<string, string> = {}) {
   const url = new URL(`${GRAPH}${path}`)
   url.searchParams.set('access_token', token)
@@ -39,7 +30,6 @@ async function getAvgEngagement(igId: string, token: string, followers: number) 
   return { avgLikes: Math.round(avgLikes * 10) / 10, avgComments: Math.round(avgComments * 10) / 10, engagement }
 }
 
-// ── Atualizar métricas das contas Instagram ──────────────────────────────────
 export async function updateInstagramAccounts(env: Env) {
   if (!env.FB_USER_TOKEN) return
 
@@ -95,7 +85,6 @@ export async function updateInstagramAccounts(env: Env) {
   return updated
 }
 
-// ── Atualizar tendências via Google Trends RSS ───────────────────────────────
 export async function updateTrends(env: Env) {
   const rssUrl = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=BR'
 
@@ -122,7 +111,6 @@ export async function updateTrends(env: Env) {
   return items.length
 }
 
-// ── Envio do relatório via Z-API ─────────────────────────────────────────────
 async function sendReportWhatsApp(env: Env, message: string): Promise<void> {
   const phone = env.ADMIN_WHATSAPP
   if (!phone || !env.ZAPI_INSTANCE || !env.ZAPI_TOKEN) return
@@ -136,15 +124,14 @@ async function sendReportWhatsApp(env: Env, message: string): Promise<void> {
         body: JSON.stringify({ phone: `55${phone.replace(/\D/g, '')}`, message }),
       }
     )
-  } catch { /* falha silenciosa — relatório já está salvo no DB */ }
+  } catch { /* falha silenciosa */ }
 }
 
-// ── Geração + envio do relatório diário ──────────────────────────────────────
 export async function generateAndSendDailyReport(env: Env): Promise<void> {
   try {
     const report = await generateDailyReport(env)
     await sendReportWhatsApp(env, report.whatsapp_summary)
   } catch {
-    // falha silenciosa — não deve travar o cron
+    // falha silenciosa
   }
 }

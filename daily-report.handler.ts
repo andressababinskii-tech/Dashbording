@@ -1,20 +1,9 @@
-/**
- * Relatório diário de todas as contas Instagram ativas:
- * - Métricas de engajamento
- * - Dias sem postar (via Graph API)
- * - Posts agendados nos próximos 14 dias
- * - Status (ok / atenção / crítico) e insights por conta
- * Armazena em daily_reports e envia resumo via WhatsApp se configurado.
- */
-
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { newId } from './id'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ScheduledPost {
   scheduled_date: string
@@ -53,8 +42,6 @@ export interface DailyReport {
   accounts:            AccountReport[]
   whatsapp_summary:    string
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function graphGet(
   path: string,
@@ -126,8 +113,6 @@ function computeStatus(
   return 'ok'
 }
 
-// ─── Core: gerador do relatório ───────────────────────────────────────────────
-
 export async function generateDailyReport(env: Env): Promise<DailyReport> {
   const { results: accounts } = await env.DB.prepare(
     `SELECT * FROM instagram_accounts WHERE is_active = 1 ORDER BY username ASC`
@@ -136,7 +121,6 @@ export async function generateDailyReport(env: Env): Promise<DailyReport> {
   const today = new Date().toISOString().slice(0, 10)
   const in14d = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10)
 
-  // Token Meta: DB settings > variável de ambiente
   const metaTokenRow = await env.DB.prepare(
     `SELECT value FROM integration_settings WHERE key = 'meta_access_token'`
   ).first<{ value: string }>().catch(() => null)
@@ -149,7 +133,6 @@ export async function generateDailyReport(env: Env): Promise<DailyReport> {
   for (const acc of accounts) {
     const username = acc.username as string
 
-    // Posts agendados nos próximos 14 dias
     const { results: calRows } = await env.DB.prepare(
       `SELECT scheduled_date, day_of_week, format, theme, status
        FROM calendar_entries
@@ -157,7 +140,6 @@ export async function generateDailyReport(env: Env): Promise<DailyReport> {
        ORDER BY scheduled_date ASC LIMIT 20`
     ).bind(username, today, in14d).all() as { results: Record<string, unknown>[] }
 
-    // Última postagem via Graph API
     let lastPostDate: string | null = null
     const pageId = acc.facebook_page_id as string | null
 
@@ -211,7 +193,6 @@ export async function generateDailyReport(env: Env): Promise<DailyReport> {
   const totalAtt  = attention.length
   const totalCrit = critical.length
 
-  // ── Resumo formatado para WhatsApp ─────────────────────────────────────────
   const dateStr = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
   })
@@ -259,7 +240,6 @@ export async function generateDailyReport(env: Env): Promise<DailyReport> {
     whatsapp_summary:   lines.join('\n'),
   }
 
-  // Persistir no banco (best-effort)
   try {
     await env.DB.prepare(`
       INSERT INTO daily_reports (id, date, generated_at, report_json)
@@ -269,14 +249,11 @@ export async function generateDailyReport(env: Env): Promise<DailyReport> {
         generated_at = excluded.generated_at,
         report_json  = excluded.report_json
     `).bind(reportId, today, JSON.stringify(report)).run()
-  } catch { /* tabela ainda não migrada — silencioso */ }
+  } catch { /* tabela ainda não migrada */ }
 
   return report
 }
 
-// ─── HTTP handlers ────────────────────────────────────────────────────────────
-
-// GET /api/admin/reports/daily
 export async function getDailyReport(c: Context<{ Bindings: Env }>) {
   try {
     const row = await c.env.DB.prepare(
@@ -285,7 +262,6 @@ export async function getDailyReport(c: Context<{ Bindings: Env }>) {
 
     if (row) return jsonOk(c, JSON.parse(row.report_json) as DailyReport)
 
-    // Sem relatório salvo — gera na hora
     const report = await generateDailyReport(c.env)
     return jsonOk(c, report)
   } catch (e: any) {
@@ -293,7 +269,6 @@ export async function getDailyReport(c: Context<{ Bindings: Env }>) {
   }
 }
 
-// GET /api/admin/reports  — histórico (últimos N dias)
 export async function listDailyReports(c: Context<{ Bindings: Env }>) {
   try {
     const limit = Math.min(Number(c.req.query('limit') ?? '30'), 90)
@@ -312,7 +287,6 @@ export async function listDailyReports(c: Context<{ Bindings: Env }>) {
   }
 }
 
-// POST /api/admin/reports/generate  — força geração imediata
 export async function triggerDailyReport(c: Context<{ Bindings: Env }>) {
   try {
     const report = await generateDailyReport(c.env)

@@ -1,8 +1,8 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { getSetting } from '../utils/settings'
-import { generateId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { getSetting } from './settings'
+import { generateId } from './id'
 
 type C = Context<{ Bindings: Env }>
 
@@ -14,13 +14,11 @@ const MC_BASE = 'https://api.manychat.com'
 
 function mcHeaders(token: string) {
   return {
-    // ManyChat aceita tanto "Bearer token" quanto apenas o token direto
     'Authorization': token.startsWith('eyJ') ? `Bearer ${token}` : token,
     'Content-Type': 'application/json',
   }
 }
 
-// Safe fetch: always parses response, never throws on non-JSON
 async function mcFetch(url: string, token: string, options: RequestInit = {}) {
   const res = await fetch(url, {
     ...options,
@@ -34,24 +32,20 @@ async function mcFetch(url: string, token: string, options: RequestInit = {}) {
   return { ok: res.ok, status: res.status, data }
 }
 
-// GET /api/admin/conversas/info
 export async function getManyhatInfo(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'Token não configurado. Acesse Integrações para configurar.', 400)
 
   const pageRes = await mcFetch(`${MC_BASE}/fb/page/getInfo`, token)
 
-  // 401 = token inválido — usar 400 para não derrubar login do dashboard
   if (pageRes.status === 401) {
     return jsonErr(c, 'Token inválido — configure em Integrações', 400)
   }
 
-  // 200 = Facebook Messenger conectado
   if (pageRes.ok) {
     return jsonOk(c, pageRes.data?.data ?? { name: 'ManyChat', id: 'connected' })
   }
 
-  // 404 = token válido mas sem Facebook Messenger (Instagram/WhatsApp)
   if (pageRes.status === 404) {
     return jsonOk(c, { name: 'ManyChat', id: 'connected', channel: 'instagram/whatsapp' })
   }
@@ -60,7 +54,6 @@ export async function getManyhatInfo(c: C) {
   return jsonErr(c, msg, 502)
 }
 
-// GET /api/admin/conversas/subscribers?q=&page=1
 export async function listSubscribers(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -83,7 +76,6 @@ export async function listSubscribers(c: C) {
   })
 }
 
-// GET /api/admin/conversas/subscribers/:id
 export async function getSubscriber(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -96,7 +88,6 @@ export async function getSubscriber(c: C) {
   return jsonOk(c, data?.data ?? data)
 }
 
-// POST /api/admin/conversas/send
 export async function sendManyChat(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -124,18 +115,16 @@ export async function sendManyChat(c: C) {
   })
   if (!ok) return jsonErr(c, data?.message ?? 'Erro ao enviar mensagem', 502)
 
-  // Registra a mensagem no log
   try {
     await c.env.DB.prepare(
       `INSERT INTO manychat_messages (id, subscriber_id, subscriber_name, direction, content, status)
        VALUES (?, ?, ?, 'outbound', ?, 'sent')`
     ).bind(generateId(), body.subscriber_id, body.subscriber_name ?? null, body.text).run()
-  } catch { /* log opcional — não bloqueia o envio */ }
+  } catch { /* log opcional */ }
 
   return jsonOk(c, data)
 }
 
-// GET /api/admin/conversas/messages?subscriber_id=xxx
 export async function listMessages(c: C) {
   const subscriberId = c.req.query('subscriber_id')
   const limit        = parseInt(c.req.query('limit') ?? '50')
@@ -152,7 +141,6 @@ export async function listMessages(c: C) {
   return jsonOk(c, results)
 }
 
-// POST /api/admin/conversas/sync-crm — importa subscribers do ManyChat para o CRM
 export async function syncSubscribersToCRM(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -162,7 +150,6 @@ export async function syncSubscribersToCRM(c: C) {
   let updated  = 0
   let errors   = 0
 
-  // Pagina até trazer todos os subscribers (máx 10 páginas = ~200 contatos)
   while (page <= 10) {
     const { ok, data } = await mcFetch(
       `${MC_BASE}/fb/subscriber/getList?count=20&page=${page}`, token
@@ -208,7 +195,6 @@ export async function syncSubscribersToCRM(c: C) {
   return jsonOk(c, { imported, updated, errors, pages: page - 1 })
 }
 
-// GET /api/admin/conversas/flows
 export async function listFlows(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -218,7 +204,6 @@ export async function listFlows(c: C) {
   return jsonOk(c, data?.data ?? [])
 }
 
-// POST /api/admin/conversas/trigger
 export async function triggerFlow(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -232,7 +217,6 @@ export async function triggerFlow(c: C) {
   return jsonOk(c, data)
 }
 
-// GET /api/admin/conversas/tags
 export async function listTags(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)
@@ -242,7 +226,6 @@ export async function listTags(c: C) {
   return jsonOk(c, data?.data ?? [])
 }
 
-// POST /api/admin/conversas/tag
 export async function addTag(c: C) {
   const token = await resolveToken(c)
   if (!token) return jsonErr(c, 'MANYCHAT_TOKEN não configurado', 400)

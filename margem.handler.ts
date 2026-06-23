@@ -1,7 +1,7 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { generateId as nanoid } from '../utils/id'
-import { jsonOk } from '../utils/response'
+import { Env } from './auth.middleware'
+import { generateId as nanoid } from './id'
+import { jsonOk } from './response'
 
 type C = Context<{ Bindings: Env }>
 
@@ -24,7 +24,6 @@ function calcMargins(row: any) {
   }
 }
 
-// ── GET /api/admin/margem ─────────────────────────────────────────────────
 export async function listMargens(c: C) {
   const rows = await c.env.DB.prepare(
     `SELECT * FROM profit_margins ORDER BY month DESC LIMIT 12`
@@ -36,7 +35,6 @@ export async function listMargens(c: C) {
   return jsonOk(c, { months: results, chart })
 }
 
-// ── POST /api/admin/margem ────────────────────────────────────────────────
 export async function upsertMargem(c: C) {
   const body = await c.req.json<{
     month: string
