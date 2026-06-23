@@ -1,11 +1,7 @@
 import { Context } from 'hono'
-import { ok, err, notFound } from '../utils/response'
-import { Env } from '../middleware/auth.middleware'
+import { ok, err, notFound } from './response'
+import { Env } from './auth.middleware'
 
-// ────────────────────────────────────────────────────────────
-// Retorna o link wa.me com mensagem pré-preenchida para o admin
-// compartilhar manualmente (sem API externa)
-// ────────────────────────────────────────────────────────────
 export async function getWhatsAppLink(c: Context<{ Bindings: Env }>) {
   const { clientId } = c.req.param()
 
@@ -61,10 +57,6 @@ export async function getWhatsAppLink(c: Context<{ Bindings: Env }>) {
   return ok({ link, message: msg, whatsapp: row.whatsapp })
 }
 
-// ────────────────────────────────────────────────────────────
-// Envia notificação automática via Z-API (se configurado)
-// Chamado internamente após inserir métricas
-// ────────────────────────────────────────────────────────────
 export async function sendZApiAlert(env: Env, phone: string, message: string): Promise<void> {
   if (!env.ZAPI_INSTANCE || !env.ZAPI_TOKEN) return
 
@@ -77,13 +69,9 @@ export async function sendZApiAlert(env: Env, phone: string, message: string): P
         body: JSON.stringify({ phone: `55${phone.replace(/\D/g, '')}`, message }),
       }
     )
-  } catch { /* silencia — alertas não devem travar o fluxo principal */ }
+  } catch { /* silencia */ }
 }
 
-// ────────────────────────────────────────────────────────────
-// Endpoint: dispara alerta para um ciclo específico
-// POST /api/admin/clients/:clientId/whatsapp-alert
-// ────────────────────────────────────────────────────────────
 export async function sendAlert(c: Context<{ Bindings: Env }>) {
   const { clientId } = c.req.param()
   const body = await c.req.json<{ message?: string }>()
@@ -121,9 +109,6 @@ export async function sendAlert(c: Context<{ Bindings: Env }>) {
   return ok({ message: 'Alerta enviado via Z-API' })
 }
 
-// ────────────────────────────────────────────────────────────
-// Atualiza WhatsApp do cliente
-// ────────────────────────────────────────────────────────────
 export async function updateWhatsApp(c: Context<{ Bindings: Env }>) {
   const { clientId } = c.req.param()
   const { whatsapp } = await c.req.json<{ whatsapp: string }>()

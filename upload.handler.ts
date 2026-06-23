@@ -1,6 +1,6 @@
 import { Context } from 'hono'
-import { ok, err, notFound } from '../utils/response'
-import { Env } from '../middleware/auth.middleware'
+import { ok, err, notFound } from './response'
+import { Env } from './auth.middleware'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
 const MAX_SIZE = 2 * 1024 * 1024 // 2 MB
@@ -30,7 +30,7 @@ export async function uploadLogo(c: Context<{ Bindings: Env }>) {
 
   const logoUrl = `/api/logos/${clientId}.${ext}`
   await c.env.DB.prepare(
-    'UPDATE clients SET logo_url = ?, updated_at = datetime(\'now\') WHERE id = ?'
+    `UPDATE clients SET logo_url = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(logoUrl, clientId).run()
 
   return ok({ logo_url: logoUrl })

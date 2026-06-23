@@ -1,19 +1,17 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { generateId as nanoid } from '../utils/id'
-import { jsonOk } from '../utils/response'
+import { Env } from './auth.middleware'
+import { generateId as nanoid } from './id'
+import { jsonOk } from './response'
 
 type C = Context<{ Bindings: Env }>
 
 const STAGES = ['prospeccao','contato','diagnostico','proposta','fechado','reuniao_mensal','perdido'] as const
 
-// ── GET /api/admin/crm ────────────────────────────────────────────────────
 export async function listLeads(c: C) {
   const rows = await c.env.DB.prepare(
     `SELECT * FROM crm_leads ORDER BY updated_at DESC`
   ).all()
 
-  // Group by stage
   const byStage: Record<string, any[]> = {}
   STAGES.forEach(s => (byStage[s] = []))
   for (const r of rows.results as any[]) {
@@ -38,7 +36,6 @@ export async function listLeads(c: C) {
   })
 }
 
-// ── POST /api/admin/crm ───────────────────────────────────────────────────
 export async function createLead(c: C) {
   const body = await c.req.json<{
     name: string; company?: string; email?: string; phone?: string
@@ -58,7 +55,6 @@ export async function createLead(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── PUT /api/admin/crm/:id ────────────────────────────────────────────────
 export async function updateLead(c: C) {
   const id   = c.req.param('id')
   const body = await c.req.json<{
@@ -83,13 +79,11 @@ export async function updateLead(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── DELETE /api/admin/crm/:id ─────────────────────────────────────────────
 export async function deleteLead(c: C) {
   await c.env.DB.prepare(`DELETE FROM crm_leads WHERE id=?`).bind(c.req.param('id')).run()
   return jsonOk(c, { deleted: true })
 }
 
-// ── GET /api/admin/crm/:id/interactions ───────────────────────────────────
 export async function listInteractions(c: C) {
   const rows = await c.env.DB.prepare(
     `SELECT * FROM crm_interactions WHERE lead_id=? ORDER BY created_at DESC`
@@ -97,7 +91,6 @@ export async function listInteractions(c: C) {
   return jsonOk(c, rows.results)
 }
 
-// ── POST /api/admin/crm/:id/interactions ──────────────────────────────────
 export async function addInteraction(c: C) {
   const leadId = c.req.param('id')
   const body   = await c.req.json<{ type: string; content: string }>()

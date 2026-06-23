@@ -1,9 +1,8 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { newId } from './id'
 
-// GET /api/admin/instagram
 export async function listInstagramAccounts(c: Context<{ Bindings: Env }>) {
   const { results } = await c.env.DB.prepare(
     `SELECT * FROM instagram_accounts ORDER BY is_active DESC, username ASC`
@@ -11,7 +10,6 @@ export async function listInstagramAccounts(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, results)
 }
 
-// PUT /api/admin/instagram/:username  — upsert (usado pelo sync Python)
 export async function upsertInstagramAccount(c: Context<{ Bindings: Env }>) {
   const username = c.req.param('username')
   const body = await c.req.json<{
@@ -61,7 +59,6 @@ export async function upsertInstagramAccount(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { username })
 }
 
-// GET /api/admin/instagram/:username  — detalhe completo da conta
 export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
   const username = c.req.param('username')
 
@@ -70,7 +67,6 @@ export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
   ).bind(username).first() as Record<string, unknown> | null
   if (!account) return jsonErr(c, 'Conta não encontrada', 404)
 
-  // Últimas entradas do calendário (próximos 30 dias)
   const { results: calendar } = await c.env.DB.prepare(
     `SELECT scheduled_date, day_of_week, format, theme, caption, status
      FROM calendar_entries
@@ -78,13 +74,11 @@ export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
      ORDER BY scheduled_date ASC LIMIT 20`
   ).bind(username).all()
 
-  // Tendências do nicho desta conta
   const nicho = account.username as string
   const { results: trends } = await c.env.DB.prepare(
     `SELECT type, content FROM trends WHERE category = ? ORDER BY updated_at DESC LIMIT 20`
   ).bind(nicho).all()
 
-  // Melhores posts da semana via Graph API
   let topPosts: unknown[] = []
   const pageId = account.facebook_page_id as string | null
   if (pageId && c.env.FB_USER_TOKEN) {
@@ -95,7 +89,6 @@ export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
       const ptData = await ptResp.json() as { access_token?: string }
       const pageToken = ptData.access_token ?? c.env.FB_USER_TOKEN
 
-      // Buscar ID da conta Instagram
       const igResp = await fetch(
         `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`
       )
@@ -111,7 +104,6 @@ export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
           like_count?: number; comments_count?: number; timestamp?: string
         }>
 
-        // Filtrar última semana e ordenar por engajamento
         const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
         topPosts = posts
           .filter(p => (p.timestamp ?? '') >= oneWeekAgo)
@@ -119,14 +111,13 @@ export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
           .slice(0, 6)
       }
     } catch {
-      // falha silenciosa — retorna sem top posts
+      // falha silenciosa
     }
   }
 
   return jsonOk(c, { account, calendar, trends, topPosts })
 }
 
-// DELETE /api/admin/instagram/:username
 export async function deleteInstagramAccount(c: Context<{ Bindings: Env }>) {
   const username = c.req.param('username')
   await c.env.DB.prepare(
@@ -135,7 +126,6 @@ export async function deleteInstagramAccount(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { username })
 }
 
-// PATCH /api/admin/instagram/:username/status
 export async function toggleInstagramStatus(c: Context<{ Bindings: Env }>) {
   const username = c.req.param('username')
   const { is_active } = await c.req.json<{ is_active: number }>()

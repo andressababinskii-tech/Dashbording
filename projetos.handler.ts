@@ -1,11 +1,10 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { generateId as nanoid } from '../utils/id'
-import { jsonOk } from '../utils/response'
+import { Env } from './auth.middleware'
+import { generateId as nanoid } from './id'
+import { jsonOk } from './response'
 
 type C = Context<{ Bindings: Env }>
 
-// ── GET /api/admin/projetos ───────────────────────────────────────────────
 export async function listProjects(c: C) {
   const rows = await c.env.DB.prepare(`
     SELECT p.*, c.name as client_name,
@@ -19,7 +18,6 @@ export async function listProjects(c: C) {
   return jsonOk(c, rows.results)
 }
 
-// ── POST /api/admin/projetos ──────────────────────────────────────────────
 export async function createProject(c: C) {
   const body = await c.req.json<{
     client_id?: string; name: string; description?: string
@@ -39,7 +37,6 @@ export async function createProject(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── PUT /api/admin/projetos/:id ───────────────────────────────────────────
 export async function updateProject(c: C) {
   const id   = c.req.param('id')
   const body = await c.req.json<{
@@ -65,13 +62,11 @@ export async function updateProject(c: C) {
   return jsonOk(c, { ok: true })
 }
 
-// ── DELETE /api/admin/projetos/:id ────────────────────────────────────────
 export async function deleteProject(c: C) {
   await c.env.DB.prepare(`DELETE FROM projects WHERE id=?`).bind(c.req.param('id')).run()
   return jsonOk(c, { ok: true })
 }
 
-// ── GET /api/admin/projetos/:id/tasks ─────────────────────────────────────
 export async function listProjectTasks(c: C) {
   const rows = await c.env.DB.prepare(
     `SELECT * FROM project_tasks WHERE project_id=? ORDER BY order_index, created_at`
@@ -79,7 +74,6 @@ export async function listProjectTasks(c: C) {
   return jsonOk(c, rows.results)
 }
 
-// ── POST /api/admin/projetos/:id/tasks ────────────────────────────────────
 export async function createProjectTask(c: C) {
   const projectId = c.req.param('id')
   const body = await c.req.json<{ title: string; due_date?: string; order_index?: number }>()
@@ -90,7 +84,6 @@ export async function createProjectTask(c: C) {
      VALUES (?,?,?,?,?)`
   ).bind(id, projectId, body.title, body.due_date ?? null, body.order_index ?? 0).run()
 
-  // bump project updated_at
   await c.env.DB.prepare(
     `UPDATE projects SET updated_at=datetime('now') WHERE id=?`
   ).bind(projectId).run()
@@ -98,7 +91,6 @@ export async function createProjectTask(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── PATCH /api/admin/projetos/tasks/:taskId ───────────────────────────────
 export async function updateProjectTask(c: C) {
   const taskId = c.req.param('taskId')
   const body   = await c.req.json<{ title?: string; done?: boolean; due_date?: string }>()
@@ -119,7 +111,6 @@ export async function updateProjectTask(c: C) {
   return jsonOk(c, { ok: true })
 }
 
-// ── DELETE /api/admin/projetos/tasks/:taskId ──────────────────────────────
 export async function deleteProjectTask(c: C) {
   await c.env.DB.prepare(
     `DELETE FROM project_tasks WHERE id=?`

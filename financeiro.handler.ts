@@ -1,20 +1,17 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { generateId as nanoid } from '../utils/id'
-import { jsonOk } from '../utils/response'
+import { Env } from './auth.middleware'
+import { generateId as nanoid } from './id'
+import { jsonOk } from './response'
 
 type C = Context<{ Bindings: Env }>
 
-// ── GET /api/admin/financeiro?month=YYYY-MM ────────────────────────────────
 export async function getFinanceiro(c: C) {
   const month = c.req.query('month') ?? new Date().toISOString().slice(0, 7)
 
-  // Entries do mês
   const entries = await c.env.DB.prepare(
     `SELECT * FROM financial_entries WHERE strftime('%Y-%m', date) = ? ORDER BY date DESC`
   ).bind(month).all()
 
-  // Resumo dos últimos 6 meses
   const chart = await c.env.DB.prepare(`
     SELECT
       strftime('%Y-%m', date) as month,
@@ -26,7 +23,6 @@ export async function getFinanceiro(c: C) {
     ORDER BY month
   `).all()
 
-  // Recorrentes ativos
   const recurring = await c.env.DB.prepare(
     `SELECT * FROM financial_entries WHERE recurring=1 ORDER BY category, description`
   ).all()
@@ -43,7 +39,6 @@ export async function getFinanceiro(c: C) {
   })
 }
 
-// ── POST /api/admin/financeiro ─────────────────────────────────────────────
 export async function createEntry(c: C) {
   const body = await c.req.json<{
     type: string; category: string; description?: string
@@ -59,7 +54,6 @@ export async function createEntry(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── PUT /api/admin/financeiro/:id ──────────────────────────────────────────
 export async function updateEntry(c: C) {
   const id   = c.req.param('id')
   const body = await c.req.json<{
@@ -83,7 +77,6 @@ export async function updateEntry(c: C) {
   return jsonOk(c, { id })
 }
 
-// ── DELETE /api/admin/financeiro/:id ──────────────────────────────────────
 export async function deleteEntry(c: C) {
   await c.env.DB.prepare(`DELETE FROM financial_entries WHERE id=?`).bind(c.req.param('id')).run()
   return jsonOk(c, { deleted: true })

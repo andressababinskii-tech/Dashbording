@@ -1,8 +1,8 @@
 import { Context } from 'hono'
 import { hash } from 'bcryptjs'
-import { ok, created, err, notFound } from '../utils/response'
-import { generateId } from '../utils/id'
-import { Env } from '../middleware/auth.middleware'
+import { ok, created, err, notFound } from './response'
+import { generateId } from './id'
+import { Env } from './auth.middleware'
 
 export async function listClients(c: Context<{ Bindings: Env }>) {
   const { results } = await c.env.DB.prepare(
@@ -129,7 +129,6 @@ export async function deleteClient(c: Context<{ Bindings: Env }>) {
   if (!client) return notFound('Cliente')
 
   if (hard) {
-    // Hard delete — remove completely from all tables
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM daily_metrics WHERE cycle_id IN (SELECT id FROM cycles WHERE client_id=?)').bind(id),
       c.env.DB.prepare('DELETE FROM cycles WHERE client_id=?').bind(id),
@@ -142,7 +141,6 @@ export async function deleteClient(c: Context<{ Bindings: Env }>) {
     return ok({ message: 'Cliente removido permanentemente' })
   }
 
-  // Soft delete
   await c.env.DB.batch([
     c.env.DB.prepare('UPDATE clients SET is_active = 0, updated_at = datetime(\'now\') WHERE id = ?').bind(id),
     c.env.DB.prepare('UPDATE users SET is_active = 0 WHERE client_id = ?').bind(id),
@@ -151,7 +149,6 @@ export async function deleteClient(c: Context<{ Bindings: Env }>) {
   return ok({ message: 'Cliente desativado com sucesso' })
 }
 
-// POST /api/admin/clients/:clientId/send-message
 export async function sendClientMessage(c: Context<{ Bindings: Env }>) {
   const { clientId } = c.req.param()
   const body = await c.req.json<{ channel: 'whatsapp' | 'email'; message: string; subject?: string }>()
@@ -169,7 +166,6 @@ export async function sendClientMessage(c: Context<{ Bindings: Env }>) {
     if (!phone) return err('Cliente não tem WhatsApp cadastrado')
 
     if (c.env.ZAPI_INSTANCE && c.env.ZAPI_TOKEN) {
-      // Send via Z-API
       await fetch(
         `https://api.z-api.io/instances/${c.env.ZAPI_INSTANCE}/token/${c.env.ZAPI_TOKEN}/send-text`,
         {
@@ -180,7 +176,6 @@ export async function sendClientMessage(c: Context<{ Bindings: Env }>) {
       )
       result = { sent: true, via: 'zapi' }
     } else {
-      // Return wa.me link
       result = {
         sent: false,
         link: `https://wa.me/55${phone}?text=${encodeURIComponent(body.message)}`,
@@ -188,7 +183,6 @@ export async function sendClientMessage(c: Context<{ Bindings: Env }>) {
       }
     }
   } else {
-    // Email — return mailto link (no SMTP configured by default)
     result = {
       sent: false,
       link: `mailto:${client.email}?subject=${encodeURIComponent(body.subject ?? 'Mensagem da agência')}&body=${encodeURIComponent(body.message)}`,
@@ -196,7 +190,6 @@ export async function sendClientMessage(c: Context<{ Bindings: Env }>) {
     }
   }
 
-  // Log the message
   await c.env.DB.prepare(
     `INSERT INTO message_log (id, client_id, channel, message) VALUES (?, ?, ?, ?)`
   ).bind(logId, clientId, body.channel, body.message).run()
@@ -204,7 +197,6 @@ export async function sendClientMessage(c: Context<{ Bindings: Env }>) {
   return ok({ ...result, logId })
 }
 
-// GET /api/admin/clients/:clientId/messages
 export async function getClientMessages(c: Context<{ Bindings: Env }>) {
   const rows = await c.env.DB.prepare(
     `SELECT * FROM message_log WHERE client_id=? ORDER BY created_at DESC LIMIT 50`
@@ -222,13 +214,13 @@ export async function resetClientPassword(c: Context<{ Bindings: Env }>) {
   }
 
   const user = await c.env.DB.prepare(
-    'SELECT id FROM users WHERE client_id = ? AND role = \'client\''
+    `SELECT id FROM users WHERE client_id = ? AND role = 'client'`
   ).bind(id).first<{ id: string }>()
   if (!user) return notFound('Usuário do cliente')
 
   const newHash = await hash(body.new_password, 10)
   await c.env.DB.prepare(
-    'UPDATE users SET password_hash = ?, updated_at = datetime(\'now\') WHERE id = ?'
+    `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(newHash, user.id).run()
 
   return ok({ message: 'Senha redefinida com sucesso' })

@@ -1,28 +1,28 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { Env } from './middleware/auth.middleware'
-import { authMiddleware, adminOnly } from './middleware/auth.middleware'
-import { login, refresh, logout, changePassword } from './handlers/auth.handler'
-import { listClients, getClient, createClient, updateClient, deleteClient, resetClientPassword, sendClientMessage, getClientMessages } from './handlers/client.handler'
-import { listCycles, getCycle, createCycle, updateCycle, deleteCycle } from './handlers/cycle.handler'
-import { listMetrics, upsertMetric, addBudgetAdjustment } from './handlers/metrics.handler'
-import { getMyDashboard, getMyCycles, getMyCycleDetail } from './handlers/dashboard.handler'
-import { uploadLogo, serveLogo } from './handlers/upload.handler'
-import { getWhatsAppLink, sendAlert, updateWhatsApp } from './handlers/whatsapp.handler'
-import { listInstagramAccounts, getInstagramAccount, upsertInstagramAccount, toggleInstagramStatus, deleteInstagramAccount } from './handlers/instagram.handler'
-import { updateInstagramAccounts, updateTrends } from './handlers/cron.handler'
-import { getTrends, syncTrends, syncTrendsNow, searchTrends } from './handlers/trends.handler'
-import { listCalendar, createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, syncCalendar, syncCalendarFromNotion } from './handlers/calendar.handler'
-import { getFinanceiro, createEntry, updateEntry, deleteEntry } from './handlers/financeiro.handler'
-import { listTasks, createTask, updateTask, deleteTask } from './handlers/tasks.handler'
-import { listLeads, createLead, updateLead, deleteLead, listInteractions, addInteraction } from './handlers/crm.handler'
-import { listMargens, upsertMargem } from './handlers/margem.handler'
-import { listProjects, createProject, updateProject, deleteProject, listProjectTasks, createProjectTask, updateProjectTask, deleteProjectTask } from './handlers/projetos.handler'
-import { getManyhatInfo, listSubscribers, getSubscriber, sendManyChat, listFlows, triggerFlow, addTag, listTags, listMessages, syncSubscribersToCRM } from './handlers/conversas.handler'
-import { getWebhookInfo, receiveManyChat, listWebhookEvents } from './handlers/webhook.handler'
-import { getIntegracoes, saveIntegracao, testIntegracao } from './handlers/integracoes.handler'
-import { listDocuments, createDocument, updateDocument, deleteDocument } from './handlers/documents.handler'
-import { listMeetings, createMeeting, deleteMeeting } from './handlers/meetings.handler'
+import { Env, authMiddleware, adminOnly } from './auth.middleware'
+import { login, refresh, logout, changePassword } from './auth.handler'
+import { listClients, getClient, createClient, updateClient, deleteClient, resetClientPassword, sendClientMessage, getClientMessages } from './client.handler'
+import { listCycles, getCycle, createCycle, updateCycle, deleteCycle } from './cycle.handler'
+import { listMetrics, upsertMetric, addBudgetAdjustment } from './metrics.handler'
+import { getMyDashboard, getMyCycles, getMyCycleDetail } from './dashboard.handler'
+import { uploadLogo, serveLogo } from './upload.handler'
+import { getWhatsAppLink, sendAlert, updateWhatsApp } from './whatsapp.handler'
+import { listInstagramAccounts, getInstagramAccount, upsertInstagramAccount, toggleInstagramStatus, deleteInstagramAccount } from './instagram.handler'
+import { updateInstagramAccounts, updateTrends, generateAndSendDailyReport } from './cron.handler'
+import { getTrends, syncTrends, syncTrendsNow, searchTrends } from './trends.handler'
+import { listCalendar, createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, syncCalendar, syncCalendarFromNotion } from './calendar.handler'
+import { getFinanceiro, createEntry, updateEntry, deleteEntry } from './financeiro.handler'
+import { listTasks, createTask, updateTask, deleteTask } from './tasks.handler'
+import { listLeads, createLead, updateLead, deleteLead, listInteractions, addInteraction } from './crm.handler'
+import { listMargens, upsertMargem } from './margem.handler'
+import { listProjects, createProject, updateProject, deleteProject, listProjectTasks, createProjectTask, updateProjectTask, deleteProjectTask } from './projetos.handler'
+import { getManyhatInfo, listSubscribers, getSubscriber, sendManyChat, listFlows, triggerFlow, addTag, listTags, listMessages, syncSubscribersToCRM } from './conversas.handler'
+import { getWebhookInfo, receiveManyChat, listWebhookEvents } from './webhook.handler'
+import { getIntegracoes, saveIntegracao, testIntegracao } from './integracoes.handler'
+import { listDocuments, createDocument, updateDocument, deleteDocument } from './documents.handler'
+import { listMeetings, createMeeting, deleteMeeting } from './meetings.handler'
+import { getDailyReport, listDailyReports, triggerDailyReport } from './daily-report.handler'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -42,7 +42,7 @@ app.use('*', async (c, next) => {
 // ============================================================
 app.post('/api/auth/login', login)
 app.post('/api/auth/refresh', refresh)
-app.get('/api/logos/:filename', serveLogo)   // logos servidas como imagem
+app.get('/api/logos/:filename', serveLogo)
 
 // Webhook ManyChat (público — ManyChat chama esta URL)
 app.post('/api/webhook/manychat', receiveManyChat)
@@ -55,7 +55,7 @@ app.use('/api/*', authMiddleware)
 app.post('/api/auth/logout', logout)
 app.post('/api/auth/change-password', changePassword)
 
-// Dashboard do cliente (acesso do cliente)
+// Dashboard do cliente
 app.get('/api/dashboard/me', getMyDashboard)
 app.get('/api/dashboard/me/cycles', getMyCycles)
 app.get('/api/dashboard/me/cycles/:cycleId', getMyCycleDetail)
@@ -98,7 +98,7 @@ app.get('/api/admin/cycles/:cycleId/metrics', listMetrics)
 app.post('/api/admin/cycles/:cycleId/metrics', upsertMetric)
 app.post('/api/admin/cycles/:cycleId/budget-adjustment', addBudgetAdjustment)
 
-// Logo (upload + serve público)
+// Logo
 app.post('/api/admin/clients/:clientId/logo', uploadLogo)
 
 // WhatsApp
@@ -127,7 +127,12 @@ app.delete('/api/admin/calendar/:id', deleteCalendarEntry)
 app.post('/api/admin/calendar/sync', syncCalendar)
 app.post('/api/admin/calendar/sync-notion', syncCalendarFromNotion)
 
-// ── Financeiro ───────────────────────────────────────────────────────────────
+// ── Relatórios Diários Instagram ───────────────────────────────────────────
+app.get('/api/admin/reports', listDailyReports)
+app.get('/api/admin/reports/daily', getDailyReport)
+app.post('/api/admin/reports/generate', triggerDailyReport)
+
+// ── Financeiro ────────────────────────────────────────────────────────────────
 app.get('/api/admin/financeiro', getFinanceiro)
 app.post('/api/admin/financeiro', createEntry)
 app.put('/api/admin/financeiro/:id', updateEntry)
@@ -161,24 +166,24 @@ app.post('/api/admin/projetos/:id/tasks', createProjectTask)
 app.patch('/api/admin/projetos/tasks/:taskId', updateProjectTask)
 app.delete('/api/admin/projetos/tasks/:taskId', deleteProjectTask)
 
-// ── Integrações (Meta / Notion / ManyChat tokens) ────────────────────────────
+// ── Integrações ───────────────────────────────────────────────────────────────
 app.get('/api/admin/integracoes', getIntegracoes)
 app.put('/api/admin/integracoes/:service', saveIntegracao)
 app.post('/api/admin/integracoes/:service/test', testIntegracao)
 
 // ── Conversas (ManyChat) ──────────────────────────────────────────────────────
-app.get('/api/admin/conversas/info',           getManyhatInfo)
-app.get('/api/admin/conversas/subscribers',    listSubscribers)
+app.get('/api/admin/conversas/info',            getManyhatInfo)
+app.get('/api/admin/conversas/subscribers',     listSubscribers)
 app.get('/api/admin/conversas/subscribers/:id', getSubscriber)
-app.post('/api/admin/conversas/send',          sendManyChat)
-app.get('/api/admin/conversas/flows',          listFlows)
-app.post('/api/admin/conversas/trigger',       triggerFlow)
-app.get('/api/admin/conversas/tags',           listTags)
-app.post('/api/admin/conversas/tag',           addTag)
-app.get('/api/admin/conversas/messages',       listMessages)
-app.post('/api/admin/conversas/sync-crm',      syncSubscribersToCRM)
-app.get('/api/admin/conversas/webhook-info',   getWebhookInfo)
-app.get('/api/admin/conversas/events',         listWebhookEvents)
+app.post('/api/admin/conversas/send',           sendManyChat)
+app.get('/api/admin/conversas/flows',           listFlows)
+app.post('/api/admin/conversas/trigger',        triggerFlow)
+app.get('/api/admin/conversas/tags',            listTags)
+app.post('/api/admin/conversas/tag',            addTag)
+app.get('/api/admin/conversas/messages',        listMessages)
+app.post('/api/admin/conversas/sync-crm',       syncSubscribersToCRM)
+app.get('/api/admin/conversas/webhook-info',    getWebhookInfo)
+app.get('/api/admin/conversas/events',          listWebhookEvents)
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
@@ -189,11 +194,18 @@ app.notFound((c) => c.json({ success: false, error: 'Rota não encontrada' }, 40
 export default {
   fetch: app.fetch.bind(app),
 
-  // Cron: toda segunda às 12h UTC (9h BRT)
+  // Cron: todo dia às 12h UTC (9h BRT)
+  // Gera e envia relatório diário de Instagram.
+  // Toda segunda-feira: também atualiza métricas e trends.
   async scheduled(_event: ScheduledEvent, env: Env) {
-    await Promise.allSettled([
-      updateInstagramAccounts(env),
-      updateTrends(env),
-    ])
+    await generateAndSendDailyReport(env)
+
+    // Atualização semanal de métricas (segunda-feira)
+    if (new Date().getUTCDay() === 1) {
+      await Promise.allSettled([
+        updateInstagramAccounts(env),
+        updateTrends(env),
+      ])
+    }
   },
 }

@@ -1,9 +1,8 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { newId } from './id'
 
-// GET /api/admin/calendar?username=&month=2026-05
 export async function listCalendar(c: Context<{ Bindings: Env }>) {
   const username = c.req.query('username') ?? null
   const month    = c.req.query('month') ?? null
@@ -20,7 +19,6 @@ export async function listCalendar(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, results)
 }
 
-// POST /api/admin/calendar  — criar entrada
 export async function createCalendarEntry(c: Context<{ Bindings: Env }>) {
   const body = await c.req.json<{
     username: string; scheduled_date: string; day_of_week?: string
@@ -46,7 +44,6 @@ export async function createCalendarEntry(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { id })
 }
 
-// PATCH /api/admin/calendar/:id  — atualizar (todos os campos)
 export async function updateCalendarEntry(c: Context<{ Bindings: Env }>) {
   const id   = c.req.param('id')
   const body = await c.req.json<{
@@ -73,7 +70,6 @@ export async function updateCalendarEntry(c: Context<{ Bindings: Env }>) {
     `UPDATE calendar_entries SET ${sets.join(', ')} WHERE id = ?`
   ).bind(...binds).run()
 
-  // If Notion token is set, push update to Notion
   if (c.env.NOTION_TOKEN && body.status) {
     const entry = await c.env.DB.prepare(
       `SELECT * FROM calendar_entries WHERE id=?`
@@ -86,14 +82,12 @@ export async function updateCalendarEntry(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { id })
 }
 
-// DELETE /api/admin/calendar/:id
 export async function deleteCalendarEntry(c: Context<{ Bindings: Env }>) {
   const id = c.req.param('id')
   await c.env.DB.prepare(`DELETE FROM calendar_entries WHERE id = ?`).bind(id).run()
   return jsonOk(c, { id })
 }
 
-// POST /api/admin/calendar/sync  — recebe batch do Python
 export async function syncCalendar(c: Context<{ Bindings: Env }>) {
   const body = await c.req.json<{
     username: string
@@ -121,7 +115,6 @@ export async function syncCalendar(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { username: body.username, month: body.month, count: stmts.length })
 }
 
-// POST /api/admin/calendar/sync-notion — pull from Notion directly (requires NOTION_TOKEN)
 export async function syncCalendarFromNotion(c: Context<{ Bindings: Env }>) {
   if (!c.env.NOTION_TOKEN) {
     return jsonErr(c, 'NOTION_TOKEN não configurado. Execute: wrangler secret put NOTION_TOKEN', 400)
@@ -131,7 +124,6 @@ export async function syncCalendarFromNotion(c: Context<{ Bindings: Env }>) {
   const month     = c.req.query('month') ?? new Date().toISOString().slice(0, 7)
   const pageId    = c.env.NOTION_PAGE_ID ?? '335cd9bc1c658142b2cfecfdd1f4a9e0'
 
-  // Query Notion database for calendar entries
   const res = await fetch(`https://api.notion.com/v1/databases/${pageId}/query`, {
     method: 'POST',
     headers: {
@@ -195,7 +187,6 @@ export async function syncCalendarFromNotion(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { synced: entries.length, month })
 }
 
-// Internal: push a calendar entry update to Notion
 async function pushCalendarEntryToNotion(env: Env, entry: any) {
   if (!entry.notion_page_id || !env.NOTION_TOKEN) return
   try {

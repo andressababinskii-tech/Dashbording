@@ -1,11 +1,10 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { getSetting, setSetting } from '../utils/settings'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { getSetting, setSetting } from './settings'
 
 type C = Context<{ Bindings: Env }>
 
-// Definição dos campos de cada integração
 const SCHEMA: Record<string, { label: string; fields: { key: string; label: string; secret: boolean }[] }> = {
   meta: {
     label: 'Meta (Facebook / Instagram Ads)',
@@ -38,10 +37,8 @@ function maskValue(v: string | null): string | null {
   return `${v.slice(0, 4)}${'•'.repeat(Math.min(v.length - 8, 20))}${v.slice(-4)}`
 }
 
-// GET /api/admin/integracoes — retorna status + valores mascarados
 export async function getIntegracoes(c: C) {
   try {
-    // Uma única query para buscar todos os settings de uma vez
     const { results } = await c.env.DB
       .prepare('SELECT key, value FROM integration_settings')
       .all<{ key: string; value: string }>()
@@ -83,7 +80,6 @@ export async function getIntegracoes(c: C) {
 
 type SchemaField = { key: string; label: string; secret: boolean }
 
-// PUT /api/admin/integracoes/:service — salva tokens de uma integração
 export async function saveIntegracao(c: C) {
   const service = c.req.param('service') ?? ''
   const schema = SCHEMA[service] as (typeof SCHEMA)[string] | undefined
@@ -106,7 +102,6 @@ export async function saveIntegracao(c: C) {
   return jsonOk(c, { saved, service })
 }
 
-// POST /api/admin/integracoes/:service/test — testa a conexão
 export async function testIntegracao(c: C) {
   const service = c.req.param('service')
 
@@ -121,7 +116,6 @@ export async function testIntegracao(c: C) {
     let data: any = null
     try { data = JSON.parse(text) } catch { /* não é JSON */ }
 
-    // "Wrong token" = chave de perfil, não de bot — token salvo mas escopo errado
     if (res.status === 401) {
       const msg = data?.message ?? ''
       if (msg === 'Wrong token') {

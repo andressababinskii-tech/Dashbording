@@ -1,6 +1,6 @@
 import { Context } from 'hono'
-import { ok, err, notFound } from '../utils/response'
-import { Env } from '../middleware/auth.middleware'
+import { ok, err, notFound } from './response'
+import { Env } from './auth.middleware'
 
 function calcProjection(leadsNow: number, daysPassed: number, totalDays: number): number {
   if (daysPassed === 0) return 0
@@ -11,7 +11,6 @@ export async function getMyDashboard(c: Context<{ Bindings: Env }>) {
   const user = c.get('user')
   if (!user.clientId) return err('Usuário sem cliente associado', 400)
 
-  // Ciclo ativo
   const activeCycle = await c.env.DB.prepare(
     `SELECT * FROM cycles
      WHERE client_id = ? AND status = 'active'
@@ -25,7 +24,6 @@ export async function getMyDashboard(c: Context<{ Bindings: Env }>) {
     return ok({ hasCycle: false, client: null, cycle: null, metrics: null })
   }
 
-  // Métricas do ciclo ativo
   const [metricsResult, adjustmentsResult, clientResult] = await Promise.all([
     c.env.DB.prepare(
       'SELECT * FROM daily_metrics WHERE cycle_id = ? ORDER BY metric_date ASC'
@@ -40,7 +38,7 @@ export async function getMyDashboard(c: Context<{ Bindings: Env }>) {
 
   const dailyMetrics = metricsResult.results as Array<{
     metric_date: string; leads_count: number; spend_brl: number; impressions: number; clicks: number
-  }>
+  }>()
 
   const totalLeads = dailyMetrics.reduce((s, m) => s + m.leads_count, 0)
   const totalSpend = dailyMetrics.reduce((s, m) => s + m.spend_brl, 0)
@@ -60,7 +58,6 @@ export async function getMyDashboard(c: Context<{ Bindings: Env }>) {
   const projectedCpl = projectedLeads > 0 ? effectiveBudget / projectedLeads : 0
   const dailyLeadsNeeded = daysRemaining > 0 ? Math.ceil((activeCycle.lead_goal - totalLeads) / daysRemaining) : 0
 
-  // Dados do Instagram vinculado ao cliente
   let instagramData = null
   if (clientResult?.instagram_username) {
     instagramData = await c.env.DB.prepare(

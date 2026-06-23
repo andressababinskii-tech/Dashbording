@@ -1,11 +1,10 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { newId } from './id'
 
 type C = Context<{ Bindings: Env }>
 
-// GET /api/admin/clients/:clientId/documents
 export async function listDocuments(c: C) {
   const clientId = c.req.param('clientId')
   const { results } = await c.env.DB.prepare(
@@ -14,7 +13,6 @@ export async function listDocuments(c: C) {
   return jsonOk(c, results)
 }
 
-// POST /api/admin/clients/:clientId/documents
 export async function createDocument(c: C) {
   const clientId = c.req.param('clientId')
   const body = await c.req.json<{ title: string; type?: string; content?: string }>()
@@ -27,7 +25,6 @@ export async function createDocument(c: C) {
   return jsonOk(c, { id })
 }
 
-// PUT /api/admin/clients/:clientId/documents/:docId
 export async function updateDocument(c: C) {
   const docId = c.req.param('docId')
   const body = await c.req.json<{ title?: string; type?: string; content?: string }>()
@@ -43,7 +40,6 @@ export async function updateDocument(c: C) {
   return jsonOk(c, { id: docId })
 }
 
-// DELETE /api/admin/clients/:clientId/documents/:docId
 export async function deleteDocument(c: C) {
   const docId = c.req.param('docId')
   await c.env.DB.prepare(`DELETE FROM client_documents WHERE id = ?`).bind(docId).run()
