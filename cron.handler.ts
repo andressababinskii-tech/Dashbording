@@ -1,11 +1,14 @@
 /**
- * Cron handler — executa toda segunda às 9h BRT (12h UTC)
- * 1. Atualiza métricas de todas as contas Instagram via Graph API
- * 2. Atualiza trending topics Brasil via Google Trends RSS
+ * Cron handler — executa todo dia às 9h BRT (12h UTC)
+ * 1. Gera e envia relatório diário de todas as contas Instagram
+ * 2. Toda segunda-feira também:
+ *    a. Atualiza métricas de todas as contas Instagram via Graph API
+ *    b. Atualiza trending topics Brasil via Google Trends RSS
  */
 
 import { Env } from '../middleware/auth.middleware'
 import { newId } from '../utils/id'
+import { generateDailyReport } from './daily-report.handler'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
@@ -36,7 +39,7 @@ async function getAvgEngagement(igId: string, token: string, followers: number) 
   return { avgLikes: Math.round(avgLikes * 10) / 10, avgComments: Math.round(avgComments * 10) / 10, engagement }
 }
 
-// ── Atualizar contas Instagram ───────────────────────────────────────────────
+// ── Atualizar métricas das contas Instagram ──────────────────────────────────
 export async function updateInstagramAccounts(env: Env) {
   if (!env.FB_USER_TOKEN) return
 
@@ -59,11 +62,11 @@ export async function updateInstagramAccounts(env: Env) {
         fields: 'username,followers_count,follows_count,media_count',
       }) as { username?: string; followers_count?: number; follows_count?: number; media_count?: number }
 
-      const username  = profile.username
+      const username = profile.username
       if (!username) continue
 
-      const followers = profile.followers_count ?? 0
-      const following = profile.follows_count ?? 0
+      const followers  = profile.followers_count ?? 0
+      const following  = profile.follows_count ?? 0
       const mediaCount = profile.media_count ?? 0
 
       const { avgLikes, avgComments, engagement } = await getAvgEngagement(ig.id, pageToken, followers)
@@ -99,7 +102,7 @@ export async function updateTrends(env: Env) {
   const r = await fetch(rssUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } })
   if (!r.ok) return 0
 
-  const xml  = await r.text()
+  const xml   = await r.text()
   const items = [...xml.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)]
     .map(m => m[1].trim())
     .filter(t => !t.includes('Daily Search Trends'))
@@ -107,7 +110,6 @@ export async function updateTrends(env: Env) {
 
   if (!items.length) return 0
 
-  // Limpar trending_br e inserir novos
   await env.DB.prepare(`DELETE FROM trends WHERE category = 'trending_br'`).run()
 
   const stmts = items.map(item =>
@@ -118,4 +120,31 @@ export async function updateTrends(env: Env) {
   await env.DB.batch(stmts)
 
   return items.length
+}
+
+// ── Envio do relatório via Z-API ─────────────────────────────────────────────
+async function sendReportWhatsApp(env: Env, message: string): Promise<void> {
+  const phone = env.ADMIN_WHATSAPP
+  if (!phone || !env.ZAPI_INSTANCE || !env.ZAPI_TOKEN) return
+
+  try {
+    await fetch(
+      `https://api.z-api.io/instances/${env.ZAPI_INSTANCE}/token/${env.ZAPI_TOKEN}/send-text`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: `55${phone.replace(/\D/g, '')}`, message }),
+      }
+    )
+  } catch { /* falha silenciosa — relatório já está salvo no DB */ }
+}
+
+// ── Geração + envio do relatório diário ──────────────────────────────────────
+export async function generateAndSendDailyReport(env: Env): Promise<void> {
+  try {
+    const report = await generateDailyReport(env)
+    await sendReportWhatsApp(env, report.whatsapp_summary)
+  } catch {
+    // falha silenciosa — não deve travar o cron
+  }
 }

@@ -10,6 +10,7 @@ export type Env = {
   FRONTEND_URL: string
   ZAPI_INSTANCE?: string
   ZAPI_TOKEN?: string
+  ADMIN_WHATSAPP?: string    // número WhatsApp que recebe o relatório diário
   FB_USER_TOKEN?: string
   NOTION_TOKEN?: string
   NOTION_PAGE_ID?: string
@@ -32,7 +33,6 @@ export async function authMiddleware(c: Context<{ Bindings: Env }>, next: Next) 
   try {
     const payload = await verifyToken(token, c.env.JWT_SECRET)
 
-    // Verifica se a sessão ainda existe no KV (não foi revogada)
     const sessionKey = `session:${payload.sub}:${payload.tokenId}`
     const session = await c.env.SESSIONS.get(sessionKey)
     if (!session) {

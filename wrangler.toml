@@ -12,18 +12,23 @@ database_id = "45883827-7e19-4b50-a7e0-99cd67e6a21a"
 binding = "SESSIONS"
 id = "b8fec27bd57b436ea838141929060a0a"
 
-# R2 — descomente após habilitar R2 no Cloudflare Dashboard (gratuito, requer cartão)
+# R2 — descomente após habilitar R2 no Cloudflare Dashboard
 # [[r2_buckets]]
 # binding = "LOGOS"
 # bucket_name = "dashboard-logos"
 
 [triggers]
-crons = ["0 12 * * 1"]   # Segunda-feira 12h UTC = 9h BRT
+crons = ["0 12 * * *"]   # Todo dia às 12h UTC = 9h BRT (relatório diário)
+                          # Na segunda-feira também atualiza métricas e trends
 
 [vars]
 ENVIRONMENT = "production"
 FRONTEND_URL = "https://dashboard-agencia-9zn.pages.dev"
 
-# Secrets (configurar via: wrangler secret put JWT_SECRET)
-# JWT_SECRET = segredo de 256 bits para assinar tokens JWT
-# ZAPI_TOKEN = token Z-API para notificações WhatsApp automáticas (opcional)
+# Secrets (configurar via: wrangler secret put NOME_DO_SECRET)
+# JWT_SECRET       = segredo JWT de 256 bits
+# FB_USER_TOKEN    = token de usuário Meta (Graph API)
+# ADMIN_WHATSAPP   = número do WhatsApp para receber relatório (ex: 11999990000)
+# ZAPI_INSTANCE    = ID da instância Z-API
+# ZAPI_TOKEN       = token Z-API para envio do relatório via WhatsApp
+# NOTION_TOKEN     = token de integração Notion (opcional)
