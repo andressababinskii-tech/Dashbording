@@ -1,0 +1,78 @@
+name: Daily Instagram Report
+
+on:
+  schedule:
+    # 9h BRT = 12h UTC, todos os dias
+    - cron: '0 12 * * *'
+  # Permite execução manual pela aba Actions
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  instagram-report:
+    name: Generate Instagram Report
+    runs-on: ubuntu-latest
+
+    # Job-level env so that 'if' conditions can read GMAIL_USER
+    env:
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Generate report
+        id: report
+        env:
+          META_API_TOKEN: ${{ secrets.META_API_TOKEN }}
+          DASHBOARD_URL:  ${{ secrets.DASHBOARD_URL }}
+          DASHBOARD_TOKEN: ${{ secrets.DASHBOARD_TOKEN }}
+        run: |
+          python scripts/instagram_report.py
+          echo "REPORT_DATE=$(date -u '+%Y-%m-%d')" >> "$GITHUB_ENV"
+
+      - name: Commit report to repository
+        run: |
+          git config user.name  "GitHub Actions [bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          git diff --staged --quiet || git commit -m "report: Instagram diário ${{ env.REPORT_DATE }}"
+          git push
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: instagram-report-${{ env.REPORT_DATE }}
+          path: reports/
+          retention-days: 90
+
+      - name: Send report by email
+        # Only runs when GMAIL_USER and GMAIL_APP_PASSWORD secrets are set.
+        # Setup: https://myaccount.google.com/apppasswords
+        if: ${{ env.GMAIL_USER != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Relatório Instagram — ${{ env.REPORT_DATE }}"
+          to: andressababinskii@gmail.com
+          from: ${{ secrets.GMAIL_USER }}
+          convert_markdown: true
+          body: file://reports/instagram_report_${{ env.REPORT_DATE }}.md
