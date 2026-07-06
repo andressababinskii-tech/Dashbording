@@ -126,6 +126,17 @@ export async function getInstagramAccount(c: Context<{ Bindings: Env }>) {
   return jsonOk(c, { account, calendar, trends, topPosts })
 }
 
+// POST /api/admin/instagram/sync-now — re-run cron (fetch métricas via Graph API)
+export async function syncInstagramNow(c: Context<{ Bindings: Env }>) {
+  const { updateInstagramAccounts } = await import('./cron.handler')
+  try {
+    const updated = await updateInstagramAccounts(c.env)
+    return jsonOk(c, { message: 'Contas Instagram atualizadas com sucesso', updated })
+  } catch (e: any) {
+    return jsonOk(c, { message: 'Sync parcial', error: e?.message })
+  }
+}
+
 // DELETE /api/admin/instagram/:username
 export async function deleteInstagramAccount(c: Context<{ Bindings: Env }>) {
   const username = c.req.param('username')

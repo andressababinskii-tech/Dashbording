@@ -214,7 +214,7 @@ export async function getClientMessages(c: Context<{ Bindings: Env }>) {
 
 export async function resetClientPassword(c: Context<{ Bindings: Env }>) {
   const { id, clientId } = c.req.param()
-  const _id = id ?? clientId
+  const resolvedId = id ?? clientId
   const body = await c.req.json<{ new_password: string }>()
 
   if (!body.new_password || body.new_password.length < 8) {
@@ -223,7 +223,7 @@ export async function resetClientPassword(c: Context<{ Bindings: Env }>) {
 
   const user = await c.env.DB.prepare(
     'SELECT id FROM users WHERE client_id = ? AND role = \'client\''
-  ).bind(id).first<{ id: string }>()
+  ).bind(resolvedId).first<{ id: string }>()
   if (!user) return notFound('Usuário do cliente')
 
   const newHash = await hash(body.new_password, 10)

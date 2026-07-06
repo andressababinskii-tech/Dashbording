@@ -9,7 +9,7 @@ import { listMetrics, upsertMetric, addBudgetAdjustment } from './handlers/metri
 import { getMyDashboard, getMyCycles, getMyCycleDetail } from './handlers/dashboard.handler'
 import { uploadLogo, serveLogo } from './handlers/upload.handler'
 import { getWhatsAppLink, sendAlert, updateWhatsApp } from './handlers/whatsapp.handler'
-import { listInstagramAccounts, getInstagramAccount, upsertInstagramAccount, toggleInstagramStatus, deleteInstagramAccount } from './handlers/instagram.handler'
+import { listInstagramAccounts, getInstagramAccount, upsertInstagramAccount, toggleInstagramStatus, deleteInstagramAccount, syncInstagramNow } from './handlers/instagram.handler'
 import { updateInstagramAccounts, updateTrends } from './handlers/cron.handler'
 import { getTrends, syncTrends, syncTrendsNow, searchTrends } from './handlers/trends.handler'
 import { listCalendar, createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, syncCalendar, syncCalendarFromNotion } from './handlers/calendar.handler'
@@ -112,6 +112,7 @@ app.get('/api/admin/instagram/:username', getInstagramAccount)
 app.put('/api/admin/instagram/:username', upsertInstagramAccount)
 app.patch('/api/admin/instagram/:username/status', toggleInstagramStatus)
 app.delete('/api/admin/instagram/:username', deleteInstagramAccount)
+app.post('/api/admin/instagram/sync-now', syncInstagramNow)
 
 // Tendências
 app.get('/api/admin/trends', getTrends)
