@@ -1,7 +1,7 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk } from '../utils/response'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { jsonOk } from './response'
+import { newId } from './id'
 
 // GET /api/admin/trends
 export async function getTrends(c: Context<{ Bindings: Env }>) {

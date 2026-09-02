@@ -4,8 +4,8 @@
  * 2. Atualiza trending topics Brasil via Google Trends RSS
  */
 
-import { Env } from '../middleware/auth.middleware'
-import { newId } from '../utils/id'
+import { Env } from './auth.middleware'
+import { newId } from './id'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 

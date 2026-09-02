@@ -1,6 +1,6 @@
 import { Context } from 'hono'
-import { ok, err, notFound } from '../utils/response'
-import { Env } from '../middleware/auth.middleware'
+import { ok, err, notFound } from './response'
+import { Env } from './auth.middleware'
 
 function calcProjection(leadsNow: number, daysPassed: number, totalDays: number): number {
   if (daysPassed === 0) return 0
