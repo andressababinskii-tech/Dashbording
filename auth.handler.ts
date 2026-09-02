@@ -1,9 +1,9 @@
 import { Context } from 'hono'
 import { compare, hash } from 'bcryptjs'
-import { signAccessToken, signRefreshToken, verifyToken } from '../utils/jwt'
-import { ok, err, unauthorized } from '../utils/response'
-import { generateId } from '../utils/id'
-import { Env } from '../middleware/auth.middleware'
+import { signAccessToken, signRefreshToken, verifyToken } from './jwt'
+import { ok, err, unauthorized } from './response'
+import { generateId } from './id'
+import { Env } from './auth.middleware'
 
 export async function login(c: Context<{ Bindings: Env }>) {
   const body = await c.req.json<{ email: string; password: string }>()

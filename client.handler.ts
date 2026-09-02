@@ -1,8 +1,8 @@
 import { Context } from 'hono'
 import { hash } from 'bcryptjs'
-import { ok, created, err, notFound } from '../utils/response'
-import { generateId } from '../utils/id'
-import { Env } from '../middleware/auth.middleware'
+import { ok, created, err, notFound } from './response'
+import { generateId } from './id'
+import { Env } from './auth.middleware'
 
 export async function listClients(c: Context<{ Bindings: Env }>) {
   const { results } = await c.env.DB.prepare(
@@ -213,8 +213,7 @@ export async function getClientMessages(c: Context<{ Bindings: Env }>) {
 }
 
 export async function resetClientPassword(c: Context<{ Bindings: Env }>) {
-  const { id, clientId } = c.req.param()
-  const _id = id ?? clientId
+  const { id } = c.req.param()
   const body = await c.req.json<{ new_password: string }>()
 
   if (!body.new_password || body.new_password.length < 8) {

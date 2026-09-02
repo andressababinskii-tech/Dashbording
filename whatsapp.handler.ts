@@ -1,6 +1,6 @@
 import { Context } from 'hono'
-import { ok, err, notFound } from '../utils/response'
-import { Env } from '../middleware/auth.middleware'
+import { ok, err, notFound } from './response'
+import { Env } from './auth.middleware'
 
 // ────────────────────────────────────────────────────────────
 // Retorna o link wa.me com mensagem pré-preenchida para o admin

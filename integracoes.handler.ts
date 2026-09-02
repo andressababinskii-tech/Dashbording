@@ -1,7 +1,7 @@
 import { Context } from 'hono'
-import { Env } from '../middleware/auth.middleware'
-import { jsonOk, jsonErr } from '../utils/response'
-import { getSetting, setSetting } from '../utils/settings'
+import { Env } from './auth.middleware'
+import { jsonOk, jsonErr } from './response'
+import { getSetting, setSetting } from './settings'
 
 type C = Context<{ Bindings: Env }>
 
