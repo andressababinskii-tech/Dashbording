@@ -1,0 +1,71 @@
+name: Daily Instagram Report
+
+on:
+  schedule:
+    # Runs every day at 08:00 BRT (11:00 UTC)
+    - cron: '0 11 * * *'
+  # Allow manual trigger from the GitHub Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  instagram-report:
+    name: Generate Instagram Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Generate report
+        env:
+          META_API_TOKEN: ${{ secrets.META_API_TOKEN }}
+        run: |
+          python scripts/instagram_report.py
+          echo "REPORT_DATE=$(date -u '+%Y-%m-%d')" >> "$GITHUB_ENV"
+
+      - name: Commit report to repository
+        run: |
+          git config user.name "GitHub Actions [bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          git diff --staged --quiet || git commit -m "report: Instagram diário ${{ env.REPORT_DATE }}"
+          git push
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: instagram-report-${{ env.REPORT_DATE }}
+          path: reports/
+          retention-days: 90
+
+      - name: Send report by email
+        # Requires GMAIL_USER and GMAIL_APP_PASSWORD secrets to be configured
+        # See: https://support.google.com/accounts/answer/185833 (App Password)
+        if: ${{ env.GMAIL_USER != '' }}
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Relatório Instagram — ${{ env.REPORT_DATE }}"
+          to: andressababinskii@gmail.com
+          from: ${{ secrets.GMAIL_USER }}
+          convert_markdown: true
+          body: file://reports/instagram_report_${{ env.REPORT_DATE }}.md
