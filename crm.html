@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e3e6eb;
+  --text: #15181e; --muted: #6b7280; --accent: #5b5bd6; --accent-soft: #ececfb;
+  --ok: #1f9d55; --warn: #c07a00; --danger: #d23f3f; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  --s-prospeccao: #8b93a7; --s-contato: #3b82f6; --s-diagnostico: #8b5cf6; --s-proposta: #f59e0b;
+  --s-fechado: #10b981; --s-reuniao_mensal: #06b6d4; --s-perdido: #ef4444;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
+    --text: #e8eaef; --muted: #9aa1ae; --accent: #8b8bf0; --accent-soft: #252547;
+    --shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
+  --text: #e8eaef; --muted: #9aa1ae; --accent: #8b8bf0; --accent-soft: #252547;
+  --shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 Inter, system-ui, sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.hidden { display: none !important; }
+
+/* Login */
+#login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; box-shadow: var(--shadow); }
+.login-card h1 { margin: 0 0 4px; font-size: 20px; }
+.login-card p { margin: 0 0 20px; color: var(--muted); }
+label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .03em; }
+input, select, textarea { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 70px; }
+.btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 600; }
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn-danger { color: var(--danger); }
+.btn-block { width: 100%; margin-top: 16px; }
+.err { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 10px; }
+.link { background: none; border: 0; color: var(--accent); font-weight: 600; padding: 0; }
+
+/* App */
+header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0; margin-right: auto; display: flex; align-items: center; gap: 8px; }
+.badge-demo { font-size: 11px; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+#search { width: 240px; max-width: 100%; }
+main { padding: 18px 20px 30px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.kpi .k-label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.kpi .k-value { font-size: 24px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .k-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.kpi.alert .k-value { color: var(--warn); }
+
+.funnel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; }
+.funnel h2 { font-size: 13px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.f-row { display: grid; grid-template-columns: 130px 1fr 90px; gap: 10px; align-items: center; margin: 6px 0; font-size: 13px; }
+.f-bar { height: 10px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.f-bar span { display: block; height: 100%; border-radius: 99px; }
+.f-num { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.col { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-height: 300px; }
+.col.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.col-head { padding: 12px 12px 8px; border-top: 3px solid var(--c); border-radius: 12px 12px 0 0; }
+.col-title { font-weight: 700; display: flex; justify-content: space-between; }
+.col-count { color: var(--muted); font-weight: 600; }
+.col-sum { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.col-body { padding: 4px 8px 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow); cursor: grab; }
+.card:hover { border-color: var(--accent); }
+.card.dragging { opacity: .45; }
+.card-name { font-weight: 600; }
+.card-co { color: var(--muted); font-size: 12px; }
+.card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; gap: 6px; flex-wrap: wrap; }
+.card-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pill { padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; background: var(--surface-2); color: var(--muted); }
+.pill.stale { background: #fff4e0; color: var(--warn); }
+:root[data-theme="dark"] .pill.stale { background: #3a2c10; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.stale { background: #3a2c10; } }
+.pill.appt { background: var(--accent-soft); color: var(--accent); }
+.empty { color: var(--muted); font-size: 12px; text-align: center; padding: 16px 4px; }
+
+/* Drawer */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 20; }
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: 460px; max-width: 100%; background: var(--surface); border-left: 1px solid var(--border); z-index: 21; display: flex; flex-direction: column; }
+.d-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.d-head h2 { margin: 0; font-size: 17px; }
+.d-body { padding: 4px 20px 20px; overflow-y: auto; flex: 1; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.d-actions { display: flex; gap: 8px; margin-top: 18px; }
+.d-actions .spacer { flex: 1; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.quick a { font-size: 12px; text-decoration: none; color: var(--text); }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin: 24px 0 8px; }
+.timeline { list-style: none; padding: 0; margin: 12px 0 0; }
+.timeline li { border-left: 2px solid var(--border); padding: 0 0 12px 12px; position: relative; }
+.timeline li::before { content: ""; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.t-meta { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.t-text { white-space: pre-wrap; }
+.add-int { display: grid; grid-template-columns: 120px 1fr auto; gap: 8px; align-items: start; }
+.add-int textarea { min-height: 38px; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 9px 16px; border-radius: 8px; z-index: 40; font-weight: 500; }
+
+@media (max-width: 640px) {
+  header { padding: 12px 16px; }
+  main { padding: 14px 16px 24px; }
+  #search { width: 100%; order: 3; }
+  .f-row { grid-template-columns: 95px 1fr 70px; }
+  .grid2, .add-int { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Login ─────────────────────────────────────────────── -->
+<section id="login" class="hidden">
+  <form class="login-card" id="loginForm">
+    <h1>CRM Pipeline</h1>
+    <p>Entre com sua conta de administrador.</p>
+    <label for="apiUrl">URL da API (Worker)</label>
+    <input id="apiUrl" placeholder="https://dashboard-agencia-worker.SEU.workers.dev" required>
+    <label for="email">E-mail</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Senha</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+    <div class="err" id="loginErr"></div>
+    <p style="margin:12px 0 0;text-align:center"><button type="button" class="link" id="demoBtn">Ver em modo demonstração</button></p>
+  </form>
+</section>
+
+<!-- ── App ───────────────────────────────────────────────── -->
+<section id="app" class="hidden">
+  <header>
+    <h1>CRM Pipeline <span class="badge-demo hidden" id="demoBadge">DEMO</span></h1>
+    <input id="search" type="search" placeholder="Buscar nome, empresa, telefone…">
+    <button class="btn" id="refreshBtn" title="Recarregar">↻</button>
+    <button class="btn btn-primary" id="newBtn">+ Novo lead</button>
+    <button class="btn" id="logoutBtn">Sair</button>
+  </header>
+  <main>
+    <div class="kpis" id="kpis"></div>
+    <div class="funnel" id="funnel"></div>
+    <div class="board" id="board"></div>
+  </main>
+</section>
+
+<!-- ── Drawer ────────────────────────────────────────────── -->
+<div class="overlay hidden" id="overlay"></div>
+<aside class="drawer hidden" id="drawer" aria-modal="true" role="dialog">
+  <div class="d-head">
+    <h2 id="dTitle">Lead</h2>
+    <button class="btn" id="dClose" aria-label="Fechar">✕</button>
+  </div>
+  <div class="d-body">
+    <form id="leadForm">
+      <label for="f-name">Nome *</label>
+      <input id="f-name" required>
+      <div class="grid2">
+        <div><label for="f-company">Empresa</label><input id="f-company"></div>
+        <div><label for="f-value">Valor (R$)</label><input id="f-value" type="number" min="0" step="0.01"></div>
+        <div><label for="f-email">E-mail</label><input id="f-email" type="email"></div>
+        <div><label for="f-phone">Telefone</label><input id="f-phone"></div>
+        <div><label for="f-stage">Etapa</label><select id="f-stage"></select></div>
+        <div><label for="f-appt">Agendamento</label><input id="f-appt" type="datetime-local"></div>
+      </div>
+      <label for="f-notes">Notas</label>
+      <textarea id="f-notes"></textarea>
+      <div class="quick" id="quickLinks"></div>
+      <div class="d-actions">
+        <button type="button" class="btn btn-danger" id="delBtn">Excluir</button>
+        <span class="spacer"></span>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+
+    <div id="intSection">
+      <h3>Histórico de interações</h3>
+      <form class="add-int" id="intForm">
+        <select id="i-type">
+          <option value="nota">Nota</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="ligacao">Ligação</option>
+          <option value="email">E-mail</option>
+          <option value="reuniao">Reunião</option>
+        </select>
+        <textarea id="i-content" placeholder="O que aconteceu? Próximo passo?" required></textarea>
+        <button class="btn btn-primary" type="submit">Registrar</button>
+      </form>
+      <ul class="timeline" id="timeline"></ul>
+    </div>
+  </div>
+</aside>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+(() => {
+  // ── Config ─────────────────────────────────────────────
+  const STAGES = [
+    { id: 'prospeccao',     label: 'Prospecção' },
+    { id: 'contato',        label: 'Contato' },
+    { id: 'diagnostico',    label: 'Diagnóstico' },
+    { id: 'proposta',       label: 'Proposta' },
+    { id: 'fechado',        label: 'Fechado' },
+    { id: 'reuniao_mensal', label: 'Reunião mensal' },
+    { id: 'perdido',        label: 'Perdido' },
+  ]
+  const OPEN_STAGES = ['prospeccao', 'contato', 'diagnostico', 'proposta']
+  const STALE_DAYS = 7
+  const INT_LABEL = { nota: 'Nota', whatsapp: 'WhatsApp', ligacao: 'Ligação', email: 'E-mail', reuniao: 'Reunião' }
+
+  const store = {
+    get(k) { try { return localStorage.getItem('crm.' + k) } catch { return null } },
+    set(k, v) { try { v == null ? localStorage.removeItem('crm.' + k) : localStorage.setItem('crm.' + k, v) } catch {} },
+  }
+
+  const $ = id => document.getElementById(id)
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]))
+  const brl = n => (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+  // D1 datetime('now') = "YYYY-MM-DD HH:MM:SS" em UTC
+  const parseDate = s => s ? new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s.replace(' ', 'T') + 'Z') : null
+  const daysSince = s => { const d = parseDate(s); return d ? Math.floor((Date.now() - d) / 864e5) : 0 }
+  const fmtDateTime = s => { const d = parseDate(s); return d ? d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '' }
+  const fmtAppt = s => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? s : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) }
+
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.remove('hidden')
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2600)
+  }
+
+  // ── API (real) ─────────────────────────────────────────
+  const realApi = {
+    base: () => (store.get('api') || '').replace(/\/+$/, ''),
+    async req(path, opts = {}, retry = true) {
+      const res = await fetch(this.base() + path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + store.get('token'), ...(opts.headers || {}) },
+      })
+      if (res.status === 401 && retry && store.get('refresh')) {
+        const r = await fetch(this.base() + '/api/auth/refresh', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: store.get('refresh') }),
+        })
+        const j = await r.json().catch(() => ({}))
+        if (r.ok && j.data?.accessToken) { store.set('token', j.data.accessToken); return this.req(path, opts, false) }
+        logout(); throw new Error('Sessão expirada')
+      }
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.success === false) throw new Error(json.error || 'Erro ' + res.status)
+      return json.data
+    },
+    list() { return this.req('/api/admin/crm').then(d => d.leads) },
+    create(b) { return this.req('/api/admin/crm', { method: 'POST', body: JSON.stringify(b) }) },
+    update(id, b) { return this.req('/api/admin/crm/' + id, { method: 'PUT', body: JSON.stringify(b) }) },
+    remove(id) { return this.req('/api/admin/crm/' + id, { method: 'DELETE' }) },
+    interactions(id) { return this.req('/api/admin/crm/' + id + '/interactions') },
+    addInteraction(id, b) { return this.req('/api/admin/crm/' + id + '/interactions', { method: 'POST', body: JSON.stringify(b) }) },
+  }
+
+  // ── API (demo, em memória) ─────────────────────────────
+  const demoApi = (() => {
+    const now = Date.now()
+    const ago = d => new Date(now - d * 864e5).toISOString().slice(0, 19).replace('T', ' ')
+    const leads = [
+      ['Clínica Sorriso', 'Dra. Paula Lima', 'prospeccao', 0, 1, 'Origem: ManyChat (keyword)'],
+      ['Estética Bella', 'Marina Costa', 'prospeccao', 0, 9, 'Origem: ManyChat (story_reply)'],
+      ['Odonto Prime', 'Dr. Ricardo Alves', 'contato', 3500, 2, 'Pediu cases de clínicas'],
+      ['Fisio Move', 'Camila Rocha', 'contato', 2800, 12, ''],
+      ['Derma Center', 'Dr. André Souza', 'diagnostico', 6000, 3, 'Diagnóstico de funil agendado'],
+      ['Nutri Vida', 'Juliana Melo', 'proposta', 4200, 4, 'Proposta enviada: tráfego + conteúdo'],
+      ['Vet Amigo', 'Rafael Nunes', 'proposta', 5500, 15, 'Aguardando retorno do sócio'],
+      ['Clínica Viver', 'Dra. Fernanda Reis', 'fechado', 7800, 6, 'Contrato 6 meses'],
+      ['Ortho Plus', 'Dr. Bruno Teixeira', 'reuniao_mensal', 5200, 20, 'Cliente desde mar/26'],
+      ['Spa Essence', 'Letícia Prado', 'perdido', 3000, 30, 'Motivo: preço'],
+    ].map(([company, name, stage, value, d, notes], i) => ({
+      id: 'demo' + i, name, company, email: name.split(' ').pop().toLowerCase() + '@exemplo.com',
+      phone: '5511999' + String(100000 + i * 731).slice(0, 6), stage, value, notes,
+      appointment_date: i === 4 ? new Date(now + 2 * 864e5).toISOString().slice(0, 16) : null,
+      created_at: ago(d + 5), updated_at: ago(d),
+    }))
+    const ints = { demo5: [{ id: 'x1', lead_id: 'demo5', type: 'email', content: 'Proposta enviada com 3 opções de pacote.', created_at: ago(4) }] }
+    const wait = v => new Promise(r => setTimeout(() => r(v), 120))
+    const stamp = () => new Date().toISOString().slice(0, 19).replace('T', ' ')
+    return {
+      list: () => wait(leads.map(l => ({ ...l }))),
+      create(b) { const id = 'demo' + Date.now(); leads.unshift({ id, stage: 'prospeccao', value: 0, ...b, created_at: stamp(), updated_at: stamp() }); return wait({ id }) },
+      update(id, b) { const l = leads.find(x => x.id === id); Object.entries(b).forEach(([k, v]) => { if (v != null) l[k] = v }); l.updated_at = stamp(); return wait({ id }) },
+      remove(id) { leads.splice(leads.findIndex(x => x.id === id), 1); return wait({ deleted: true }) },
+      interactions: id => wait([...(ints[id] || [])]),
+      addInteraction(id, b) { (ints[id] ||= []).unshift({ id: 'i' + Date.now(), lead_id: id, ...b, created_at: stamp() }); leads.find(x => x.id === id).updated_at = stamp(); return wait({}) },
+    }
+  })()
+
+  let api = realApi
+  let leads = []
+  let current = null // lead aberto no drawer (null = novo)
+
+  // ── Render ─────────────────────────────────────────────
+  function filtered() {
+    const q = $('search').value.trim().toLowerCase()
+    if (!q) return leads
+    return leads.filter(l => [l.name, l.company, l.email, l.phone, l.notes].some(v => String(v ?? '').toLowerCase().includes(q)))
+  }
+
+  function renderKpis() {
+    const active = leads.filter(l => l.stage !== 'perdido')
+    const won = leads.filter(l => l.stage === 'fechado' || l.stage === 'reuniao_mensal')
+    const lost = leads.filter(l => l.stage === 'perdido')
+    const open = leads.filter(l => OPEN_STAGES.includes(l.stage))
+    const pipeline = open.reduce((s, l) => s + (Number(l.value) || 0), 0)
+    const revenue = won.reduce((s, l) => s + (Number(l.value) || 0), 0)
+    const decided = won.length + lost.length
+    const winRate = decided ? (won.length / decided) * 100 : 0
+    const ticket = won.length ? revenue / won.length : 0
+    const stale = open.filter(l => daysSince(l.updated_at) >= STALE_DAYS).length
+    const k = (label, value, sub, cls = '') => `<div class="kpi ${cls}"><div class="k-label">${label}</div><div class="k-value">${value}</div><div class="k-sub">${sub}</div></div>`
+    $('kpis').innerHTML =
+      k('Leads ativos', active.length, `${open.length} em negociação`) +
+      k('Pipeline aberto', brl(pipeline), 'soma das etapas em aberto') +
+      k('Receita fechada', brl(revenue), `${won.length} clientes · ticket ${brl(ticket)}`) +
+      k('Win rate', winRate.toFixed(0) + '%', `${won.length} ganhos / ${lost.length} perdidos`) +
+      k('Leads parados', stale, `sem toque há ${STALE_DAYS}+ dias`, stale ? 'alert' : '')
+  }
+
+  function renderFunnel() {
+    // Funil cumulativo: quantos leads chegaram pelo menos até cada etapa
+    const order = ['prospeccao', 'contato', 'diagnostico', 'proposta', 'fechado']
+    const rank = s => s === 'reuniao_mensal' ? 4 : order.indexOf(s)
+    const live = leads.filter(l => l.stage !== 'perdido')
+    const top = live.length || 1
+    $('funnel').innerHTML = '<h2>Funil (leads que alcançaram cada etapa)</h2>' + order.map((s, i) => {
+      const n = live.filter(l => rank(l.stage) >= i).length
+      const pct = (n / top) * 100
+      const label = STAGES.find(x => x.id === s).label
+      return `<div class="f-row"><span>${label}</span><div class="f-bar"><span style="width:${pct}%;background:var(--s-${s})"></span></div><span class="f-num">${n} · ${pct.toFixed(0)}%</span></div>`
+    }).join('')
+  }
+
+  function cardHtml(l) {
+    const days = daysSince(l.updated_at)
+    const stale = OPEN_STAGES.includes(l.stage) && days >= STALE_DAYS
+    return `<article class="card" draggable="true" data-id="${esc(l.id)}">
+      <div class="card-name">${esc(l.name)}</div>
+      ${l.company ? `<div class="card-co">${esc(l.company)}</div>` : ''}
+      <div class="card-meta">
+        <span class="card-val">${l.value ? brl(l.value) : '—'}</span>
+        <span>
+          ${l.appointment_date ? `<span class="pill appt">📅 ${esc(fmtAppt(l.appointment_date))}</span>` : ''}
+          <span class="pill ${stale ? 'stale' : ''}" title="Última atualização">${days === 0 ? 'hoje' : days + 'd'}</span>
+        </span>
+      </div>
+    </article>`
+  }
+
+  function renderBoard() {
+    const list = filtered()
+    $('board').innerHTML = STAGES.map(s => {
+      const items = list.filter(l => l.stage === s.id)
+      const sum = items.reduce((a, l) => a + (Number(l.value) || 0), 0)
+      return `<section class="col" data-stage="${s.id}" style="--c:var(--s-${s.id})">
+        <div class="col-head">
+          <div class="col-title"><span>${s.label}</span><span class="col-count">${items.length}</span></div>
+          <div class="col-sum">${brl(sum)}</div>
+        </div>
+        <div class="col-body">${items.map(cardHtml).join('') || '<div class="empty">Arraste leads para cá</div>'}</div>
+      </section>`
+    }).join('')
+  }
+
+  function render() { renderKpis(); renderFunnel(); renderBoard() }
+
+  async function load() {
+    try { leads = await api.list(); render() }
+    catch (e) { toast(e.message) }
+  }
+
+  // ── Drag & drop ────────────────────────────────────────
+  let dragId = null
+  $('board').addEventListener('dragstart', e => {
+    const c = e.target.closest('.card'); if (!c) return
+    dragId = c.dataset.id; c.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'
+  })
+  $('board').addEventListener('dragend', e => { e.target.closest('.card')?.classList.remove('dragging') })
+  $('board').addEventListener('dragover', e => {
+    const col = e.target.closest('.col'); if (!col) return
+    e.preventDefault()
+    document.querySelectorAll('.col.drop').forEach(c => c !== col && c.classList.remove('drop'))
+    col.classList.add('drop')
+  })
+  $('board').addEventListener('dragleave', e => { if (!e.currentTarget.contains(e.relatedTarget)) document.querySelectorAll('.col.drop').forEach(c => c.classList.remove('drop')) })
+  $('board').addEventListener('drop', async e => {
+    const col = e.target.closest('.col'); if (!col || !dragId) return
+    e.preventDefault(); col.classList.remove('drop')
+    const lead = leads.find(l => l.id === dragId); const to = col.dataset.stage
+    dragId = null
+    if (!lead || lead.stage === to) return
+    const prev = { stage: lead.stage, updated_at: lead.updated_at }
+    lead.stage = to; lead.updated_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    render() // otimista
+    try {
+      await api.update(lead.id, { stage: to })
+      await api.addInteraction(lead.id, { type: 'nota', content: `Etapa: ${label(prev.stage)} → ${label(to)}` })
+    } catch (err) { Object.assign(lead, prev); render(); toast('Não foi possível mover: ' + err.message) }
+  })
+  const label = id => STAGES.find(s => s.id === id)?.label ?? id
+
+  // ── Drawer ─────────────────────────────────────────────
+  $('f-stage').innerHTML = STAGES.map(s => `<option value="${s.id}">${s.label}</option>`).join('')
+
+  function openDrawer(lead) {
+    current = lead
+    $('dTitle').textContent = lead ? lead.name : 'Novo lead'
+    $('f-name').value = lead?.name ?? ''
+    $('f-company').value = lead?.company ?? ''
+    $('f-value').value = lead?.value || ''
+    $('f-email').value = lead?.email ?? ''
+    $('f-phone').value = lead?.phone ?? ''
+    $('f-stage').value = lead?.stage ?? 'prospeccao'
+    $('f-appt').value = lead?.appointment_date ? String(lead.appointment_date).slice(0, 16).replace(' ', 'T') : ''
+    $('f-notes').value = lead?.notes ?? ''
+    $('delBtn').classList.toggle('hidden', !lead)
+    $('intSection').classList.toggle('hidden', !lead)
+    const phone = String(lead?.phone ?? '').replace(/\D/g, '')
+    $('quickLinks').innerHTML = [
+      phone && `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${phone}">WhatsApp</a>`,
+      lead?.email && `<a class="btn" href="mailto:${esc(lead.email)}">E-mail</a>`,
+      phone && `<a class="btn" href="tel:+${phone}">Ligar</a>`,
+    ].filter(Boolean).join('')
+    $('timeline').innerHTML = ''
+    $('overlay').classList.remove('hidden'); $('drawer').classList.remove('hidden')
+    if (lead) loadInteractions(lead.id); else $('f-name').focus()
+  }
+  function closeDrawer() { $('overlay').classList.add('hidden'); $('drawer').classList.add('hidden'); current = null }
+
+  async function loadInteractions(id) {
+    try {
+      const rows = await api.interactions(id)
+      if (current?.id !== id) return
+      $('timeline').innerHTML = rows.length
+        ? rows.map(r => `<li><div class="t-meta">${esc(INT_LABEL[r.type] ?? r.type)} · ${esc(fmtDateTime(r.created_at))}</div><div class="t-text">${esc(r.content)}</div></li>`).join('')
+        : '<li><div class="t-text" style="color:var(--muted)">Nenhuma interação registrada ainda.</div></li>'
+    } catch (e) { toast(e.message) }
+  }
+
+  $('board').addEventListener('click', e => {
+    const c = e.target.closest('.card'); if (!c) return
+    openDrawer(leads.find(l => l.id === c.dataset.id))
+  })
+  $('newBtn').onclick = () => openDrawer(null)
+  $('dClose').onclick = closeDrawer
+  $('overlay').onclick = closeDrawer
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('drawer').classList.contains('hidden')) closeDrawer() })
+
+  $('leadForm').addEventListener('submit', async e => {
+    e.preventDefault()
+    const body = {
+      name: $('f-name').value.trim(),
+      company: $('f-company').value.trim(),
+      email: $('f-email').value.trim(),
+      phone: $('f-phone').value.trim(),
+      stage: $('f-stage').value,
+      value: Number($('f-value').value) || 0,
+      notes: $('f-notes').value,
+      appointment_date: $('f-appt').value || null,
+    }
+    if (!body.name) return
+    try {
+      if (current) {
+        const stageChanged = current.stage !== body.stage
+        await api.update(current.id, body)
+        if (stageChanged) await api.addInteraction(current.id, { type: 'nota', content: `Etapa: ${label(current.stage)} → ${label(body.stage)}` })
+        toast('Lead atualizado')
+      } else {
+        await api.create(body); toast('Lead criado')
+      }
+      closeDrawer(); load()
+    } catch (err) { toast(err.message) }
+  })
+
+  $('delBtn').onclick = async () => {
+    if (!current || !confirm(`Excluir "${current.name}"? Essa ação não pode ser desfeita.`)) return
+    try { await api.remove(current.id); toast('Lead excluído'); closeDrawer(); load() }
+    catch (e) { toast(e.message) }
+  }
+
+  $('intForm').addEventListener('submit', async e => {
+    e.preventDefault()
+    const content = $('i-content').value.trim(); if (!content || !current) return
+    try {
+      await api.addInteraction(current.id, { type: $('i-type').value, content })
+      $('i-content').value = ''
+      current.updated_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
+      loadInteractions(current.id); render()
+    } catch (err) { toast(err.message) }
+  })
+
+  // ── Busca / refresh ────────────────────────────────────
+  $('search').addEventListener('input', renderBoard)
+  $('refreshBtn').onclick = load
+
+  // ── Sessão ─────────────────────────────────────────────
+  function showApp(demo) {
+    api = demo ? demoApi : realApi
+    $('demoBadge').classList.toggle('hidden', !demo)
+    $('login').classList.add('hidden'); $('app').classList.remove('hidden')
+    load()
+  }
+  function logout() {
+    if (api === realApi && store.get('token')) realApi.req('/api/auth/logout', { method: 'POST' }, false).catch(() => {})
+    store.set('token', null); store.set('refresh', null)
+    leads = []; $('app').classList.add('hidden'); $('login').classList.remove('hidden')
+  }
+  $('logoutBtn').onclick = logout
+  $('demoBtn').onclick = () => showApp(true)
+
+  $('loginForm').addEventListener('submit', async e => {
+    e.preventDefault(); $('loginErr').textContent = ''
+    store.set('api', $('apiUrl').value.trim())
+    try {
+      const res = await fetch(realApi.base() + '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: $('email').value, password: $('password').value }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.success) throw new Error(j.error || 'Falha no login')
+      if (j.data.user.role !== 'admin') throw new Error('O CRM é restrito a administradores')
+      store.set('token', j.data.accessToken); store.set('refresh', j.data.refreshToken)
+      showApp(false)
+    } catch (err) {
+      $('loginErr').textContent = err.message === 'Failed to fetch'
+        ? 'Não conectou à API. Confira a URL e se este domínio está liberado no CORS (FRONTEND_URL).'
+        : err.message
+    }
+  })
+
+  // ── Boot ───────────────────────────────────────────────
+  const params = new URLSearchParams(location.search)
+  if (params.get('api')) store.set('api', params.get('api'))
+  $('apiUrl').value = store.get('api') || ''
+  if (params.has('demo')) showApp(true)
+  else if (store.get('token') && store.get('api')) showApp(false)
+  else $('login').classList.remove('hidden')
+})()
+</script>
+</body>
+</html>
