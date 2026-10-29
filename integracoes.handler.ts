@@ -31,6 +31,14 @@ const SCHEMA: Record<string, { label: string; fields: { key: string; label: stri
       { key: 'manychat_token', label: 'API Token', secret: true },
     ],
   },
+  resend: {
+    label: 'Resend (E-mail)',
+    fields: [
+      { key: 'resend_api_key',        label: 'API Key',                       secret: true  },
+      { key: 'resend_webhook_secret', label: 'Webhook Signing Secret (whsec_)', secret: true  },
+      { key: 'resend_from',           label: 'Remetente (ex: Agência <no-reply@dominio.com>)', secret: false },
+    ],
+  },
 }
 
 function maskValue(v: string | null): string | null {
@@ -137,6 +145,25 @@ export async function testIntegracao(c: C) {
     }
     const name = data?.data?.name ?? data?.name ?? 'ManyChat'
     return jsonOk(c, { ok: true, info: { name, status: 'connected' } })
+  }
+
+  if (service === 'resend') {
+    const apiKey = await getSetting(c.env.DB, 'resend_api_key') ?? c.env.RESEND_API_KEY
+    if (!apiKey) return jsonErr(c, 'API Key não configurada', 400)
+
+    const res = await fetch('https://api.resend.com/domains', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    const text = await res.text()
+    let data: any = null
+    try { data = JSON.parse(text) } catch { /* não é JSON */ }
+
+    // Chave "Sending access" não lista domínios, mas é válida para envio
+    if (res.status === 401 && data?.name === 'restricted_api_key') {
+      return jsonOk(c, { ok: true, info: { status: 'connected', scope: 'sending_access' } })
+    }
+    if (!res.ok) return jsonErr(c, data?.message ?? 'Chave inválida ou revogada', 502)
+    return jsonOk(c, { ok: true, info: { status: 'connected', domains: data?.data?.length ?? 0 } })
   }
 
   if (service === 'notion') {

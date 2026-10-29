@@ -27,3 +27,5 @@ FRONTEND_URL = "https://dashboard-agencia-9zn.pages.dev"
 # Secrets (configurar via: wrangler secret put JWT_SECRET)
 # JWT_SECRET = segredo de 256 bits para assinar tokens JWT
 # ZAPI_TOKEN = token Z-API para notificações WhatsApp automáticas (opcional)
+# RESEND_API_KEY = wrangler secret put RESEND_API_KEY   (alternativa à tela Integrações)
+# RESEND_WEBHOOK_SECRET = wrangler secret put RESEND_WEBHOOK_SECRET   (whsec_..., do painel do Resend)

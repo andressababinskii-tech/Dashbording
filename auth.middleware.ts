@@ -14,6 +14,8 @@ export type Env = {
   NOTION_TOKEN?: string
   NOTION_PAGE_ID?: string
   MANYCHAT_TOKEN?: string
+  RESEND_API_KEY?: string
+  RESEND_WEBHOOK_SECRET?: string
 }
 
 declare module 'hono' {
