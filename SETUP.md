@@ -161,3 +161,22 @@ Automações Python (local)     →  sync_to_cloudflare.py  →  Cloudflare D1
   - Calendário editorial                               React Dashboard
   - Onboarding / Feedback                           (Cloudflare Pages)
 ```
+
+## Resend (e-mail + webhook)
+
+A chave **nunca** vai no código nem no chat. Duas formas de configurar:
+
+1. Painel do dashboard → Integrações → **Resend (E-mail)**: cole a API Key, o Webhook Signing Secret e o remetente.
+2. Ou via secret do Worker:
+   ```bash
+   wrangler secret put RESEND_API_KEY
+   wrangler secret put RESEND_WEBHOOK_SECRET
+   ```
+
+Webhook no painel do Resend (Webhooks → Add Endpoint):
+- URL: `https://<seu-worker>/api/webhook/resend` (também em `GET /api/admin/resend/webhook-info`)
+- Eventos: `email.delivered`, `email.bounced`, `email.complained` (+ opcionais `email.opened`, `email.clicked`)
+- Copie o **Signing Secret** (`whsec_...`) gerado e salve como acima.
+
+A rota é pública, mas só aceita requisições com assinatura Svix válida (HMAC-SHA256, janela de 5 min).
+Eventos ficam em `resend_events` (tabela criada automaticamente); bounce/complaint anotam o lead no CRM.

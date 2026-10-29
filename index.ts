@@ -20,6 +20,7 @@ import { listMargens, upsertMargem } from './handlers/margem.handler'
 import { listProjects, createProject, updateProject, deleteProject, listProjectTasks, createProjectTask, updateProjectTask, deleteProjectTask } from './handlers/projetos.handler'
 import { getManyhatInfo, listSubscribers, getSubscriber, sendManyChat, listFlows, triggerFlow, addTag, listTags, listMessages, syncSubscribersToCRM } from './handlers/conversas.handler'
 import { getWebhookInfo, receiveManyChat, listWebhookEvents } from './handlers/webhook.handler'
+import { receiveResend, getResendWebhookInfo, listResendEvents } from './handlers/resend.handler'
 import { getIntegracoes, saveIntegracao, testIntegracao } from './handlers/integracoes.handler'
 import { listDocuments, createDocument, updateDocument, deleteDocument } from './handlers/documents.handler'
 import { listMeetings, createMeeting, deleteMeeting } from './handlers/meetings.handler'
@@ -46,6 +47,9 @@ app.get('/api/logos/:filename', serveLogo)   // logos servidas como imagem
 
 // Webhook ManyChat (público — ManyChat chama esta URL)
 app.post('/api/webhook/manychat', receiveManyChat)
+
+// Webhook Resend (público — autenticado por assinatura Svix, não por JWT)
+app.post('/api/webhook/resend', receiveResend)
 
 // ============================================================
 // Rotas autenticadas (todos os papéis)
@@ -179,6 +183,10 @@ app.get('/api/admin/conversas/messages',       listMessages)
 app.post('/api/admin/conversas/sync-crm',      syncSubscribersToCRM)
 app.get('/api/admin/conversas/webhook-info',   getWebhookInfo)
 app.get('/api/admin/conversas/events',         listWebhookEvents)
+
+// ── Resend (e-mail transacional) ─────────────────────────────────────────────
+app.get('/api/admin/resend/webhook-info', getResendWebhookInfo)
+app.get('/api/admin/resend/events',       listResendEvents)
 
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
